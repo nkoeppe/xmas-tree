@@ -1,0 +1,10 @@
+{
+  "mqtt_broker": "fancyguysdev.de",
+  "mqtt_topics": {
+    "led_on": "led/on",
+    "led_off": "led/off",
+    "photo_done": "photo/done"
+  },
+  "camera_index": 0,
+  "output_directory": "./photos"
+}

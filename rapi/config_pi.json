@@ -1,0 +1,10 @@
+{
+  "mqtt_broker": "fancyguysdev.de",
+  "num_leds": 10,
+  "gpio_pin": 18,
+  "mqtt_topics": {
+    "led_on": "led/on",
+    "led_off": "led/off",
+    "photo_done": "photo/done"
+  }
+}
