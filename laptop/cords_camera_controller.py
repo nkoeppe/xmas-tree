@@ -94,7 +94,7 @@ def main():
         for angle in angles:
             current_angle = angle
             log_debug(f"Processing angle {angle}. Waiting for LED cycle to complete.")
-            wait_for_flag("cycle_done_flag")
+            wait_for_flag("cycle_done_flag", timeout=60)
 
             input(f"[INFO] Rotate the object to angle {angle}° and press Enter when ready...")
             log_debug(f"User confirmed readiness for angle {angle}. Sending ready signal to Raspberry Pi.")
