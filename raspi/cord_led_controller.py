@@ -41,7 +41,7 @@ def on_message(client, userdata, message):
         ready_next_angle_flag = True
         log_debug("Ready next angle flag set.")
 
-def wait_for_ack(flag_name, timeout=30):
+def wait_for_ack(flag_name, timeout=120):
     """Wait for a flag to be set within a timeout."""
     global photo_done_flag, ready_next_angle_flag
     log_debug(f"Waiting for {flag_name} to be set. Timeout: {timeout}s.")

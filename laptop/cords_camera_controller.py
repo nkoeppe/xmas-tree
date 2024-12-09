@@ -68,7 +68,7 @@ def on_message(client, userdata, message):
     except Exception as e:
         log_debug(f"Error handling message on topic {message.topic}: {e}")
 
-def wait_for_flag(flag_name, timeout=30):
+def wait_for_flag(flag_name, timeout=120):
     """Wait for a flag to be set within a timeout."""
     log_debug(f"Waiting for {flag_name} to be set. Timeout: {timeout}s.")
     start_time = time.time()
@@ -94,7 +94,7 @@ def main():
         for angle in angles:
             current_angle = angle
             log_debug(f"Processing angle {angle}. Waiting for LED cycle to complete.")
-            wait_for_flag("cycle_done_flag", timeout=60)
+            wait_for_flag("cycle_done_flag")
 
             input(f"[INFO] Rotate the object to angle {angle}° and press Enter when ready...")
             log_debug(f"User confirmed readiness for angle {angle}. Sending ready signal to Raspberry Pi.")
