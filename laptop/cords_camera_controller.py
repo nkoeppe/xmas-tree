@@ -15,7 +15,8 @@ CAMERA_INDEX = config["camera_index"]
 OUTPUT_DIRECTORY = config["output_directory"]
 
 # MQTT Client
-client = mqtt.Client("Laptop")
+client = mqtt.Client(client_id="Laptop", callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+
 
 # State
 led_status = None
