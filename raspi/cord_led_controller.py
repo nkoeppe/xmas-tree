@@ -54,6 +54,8 @@ def wait_for_ack(flag_name, timeout=30):
     log_debug(f"{flag_name} acknowledged.")
 
 def main():
+    strip.fill((0, 0, 0))
+
     global photo_done_flag, ready_next_angle_flag
 
     client.on_message = on_message
