@@ -18,7 +18,7 @@ MQTT_READY_NEXT_ANGLE = config["mqtt_topics"]["ready_next_angle"]
 MQTT_CYCLE_DONE = config["mqtt_topics"]["cycle_done"]
 
 # Setup for NeoPixel LEDs
-strip = neopixel.NeoPixel(PIXEL_PIN, NUM_LEDS,  brightness=1.0, auto_write=True)
+strip = neopixel.NeoPixel(PIXEL_PIN, NUM_LEDS,  brightness=0.5, auto_write=True)
 
 # MQTT Client
 client = mqtt.Client(client_id="RaspberryPi", callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
