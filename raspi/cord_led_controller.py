@@ -16,6 +16,7 @@ MQTT_LED_OFF = config["mqtt_topics"]["led_off"]
 MQTT_PHOTO_DONE = config["mqtt_topics"]["photo_done"]
 MQTT_READY_NEXT_ANGLE = config["mqtt_topics"]["ready_next_angle"]
 MQTT_CYCLE_DONE = config["mqtt_topics"]["cycle_done"]
+BRIGHTNESS = config["brightness"]
 
 # Setup for NeoPixel LEDs
 strip = neopixel.NeoPixel(PIXEL_PIN, NUM_LEDS,  brightness=0.5, auto_write=True)

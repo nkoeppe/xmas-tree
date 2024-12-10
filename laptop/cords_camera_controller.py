@@ -32,7 +32,7 @@ def log_debug(message):
 def capture_image(status, led, angle):
     """Capture image and save it."""
     log_debug(f"Starting image capture for LED {led} at angle {angle}. Status: {status}")
-    time.sleep(1)  # Ensure LED state is stable
+    time.sleep(0.15)  # Ensure LED state is stable
     os.makedirs(os.path.join(OUTPUT_DIRECTORY, f"angle_{angle}"), exist_ok=True)
     camera = cv2.VideoCapture(CAMERA_INDEX)
     ret, frame = camera.read()
