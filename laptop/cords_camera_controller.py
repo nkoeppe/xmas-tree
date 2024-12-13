@@ -12,7 +12,6 @@ MQTT_BROKER = config["mqtt_broker"]
 MQTT_LED_ON = config["mqtt_topics"]["led_on"]
 MQTT_LED_OFF = config["mqtt_topics"]["led_off"]
 MQTT_PHOTO_DONE = config["mqtt_topics"]["photo_done"]
-MQTT_PHOTO_SAMPLE_DONE = config["mqtt_topics"]["photo_sample_done"]
 MQTT_CYCLE_DONE = config["mqtt_topics"]["cycle_done"]
 MQTT_READY_NEXT_ANGLE = config["mqtt_topics"]["ready_next_angle"]
 CAMERA_INDEX = config["camera_index"]
@@ -79,13 +78,11 @@ def wait_for_flag(flag_name, timeout=600):
     globals()[flag_name] = False
     log_debug(f"{flag_name} acknowledged.")
 
-def take_sample_pics():
-    for angle in angles:
-        current_angle = angle
+def take_sample_pic(angle):
         log_debug(f"Taking sample image at angle {angle}. Make sure the room light is on.")
-        capture_image("sample", -1, current_angle)
-        input(f"[INFO] Rotate the object to angle {angle}° and press Enter when ready...")
-    client.publish(MQTT_PHOTO_SAMPLE_DONE, 0)
+        input(f"[INFO] Turn the light on and press Enter when ready...")
+        capture_image("sample", -1, angle)
+        input(f"[INFO] Turn the light off and press Enter when ready...")
 
 
 def main():
@@ -99,7 +96,6 @@ def main():
         log_debug(f"Subscribed to topics: {MQTT_LED_ON}, {MQTT_LED_OFF}, {MQTT_CYCLE_DONE}.")
         client.loop_start()
         log_debug("MQTT loop started.")
-        take_sample_pics()
 
         for angle in angles:
             current_angle = angle
@@ -107,6 +103,7 @@ def main():
             wait_for_flag("cycle_done_flag")
 
             input(f"[INFO] Rotate the object to angle {angle}° and press Enter when ready...")
+            take_sample_pic()
             log_debug(f"User confirmed readiness for angle {angle}. Sending ready signal to Raspberry Pi.")
             client.publish(MQTT_READY_NEXT_ANGLE, "")
             log_debug("Ready next angle command sent to Raspberry Pi.")

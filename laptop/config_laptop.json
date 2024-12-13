@@ -4,7 +4,6 @@
     "led_on": "led/on",
     "led_off": "led/off",
     "photo_done": "photo/done",
-    "photo_sample_done": "photo/sample_done",
     "cycle_done": "config/cycle_done",
     "ready_next_angle": "config/ready_next_angle"  },
   "camera_index": 0,
