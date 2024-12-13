@@ -16,7 +16,7 @@ def set_leds(num_leds, r, g, b, brightness):
 
 
 def main():
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         print("Usage: python script.py <num_leds> <r> <g> <b> <brightness>")
         sys.exit(1)
 
