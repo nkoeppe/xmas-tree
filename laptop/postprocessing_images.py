@@ -6,265 +6,146 @@ import json
 # Configuration
 INPUT_DIRECTORY = "./photos"
 OUTPUT_DIRECTORY = "./debug_output"
-LED_COUNT = 3
+LED_COUNT = 2
 ANGLES = [0, 90, 180, 270]  # Degrees
-IMAGE_CENTER = (257, 260)
-ROTATION_AXIS = [(400, 260),(400, 260)]
-DEBUG_MODE = True
-TURN_DIRECTION = "left"
-def calculate_difference_image(on_image_path, off_image_path):
-    """Calculate the difference where the image got brighter."""
-    on_image = cv2.imread(on_image_path, cv2.IMREAD_GRAYSCALE)
-    off_image = cv2.imread(off_image_path, cv2.IMREAD_GRAYSCALE)
+ROTATION_POINT = None  # To be set dynamically based on user selection
 
-    if on_image is None or off_image is None:
-        raise FileNotFoundError(f"Could not load images: {on_image_path} or {off_image_path}")
+def select_rotation_point(image_path):
+    """Allow user to select the rotation point from an image."""
+    image = cv2.imread(image_path)
+    if image is None:
+        raise FileNotFoundError(f"Image not found at path: {image_path}")
 
-    # Subtract 'off' image from 'on' image to detect brightening
-    diff = cv2.subtract(on_image, off_image)
+    image_flipped = cv2.flip(image, 0)  # Flip to match bottom-left coordinate system
+    selected_point = []
 
-    # Apply Gaussian blur to smooth the difference image
-    diff = cv2.GaussianBlur(diff, (5, 5), 0)
+    def click_event(event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            # Store rotation point and transform coordinates to bottom-left system
+            selected_point.append((x, image.shape[0] - y))
+            print(f"Selected rotation point: {selected_point[-1]}")
+            cv2.destroyWindow("Select Rotation Point")
 
-    # Apply a threshold to isolate significant brightness changes
-    _, thresholded = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)
-    return diff, thresholded
+    cv2.imshow("Select Rotation Point", image_flipped)
+    cv2.setMouseCallback("Select Rotation Point", click_event)
 
-def find_led_coordinates(diff_image):
-    """
-    Find the coordinates of the LED by identifying the brightest 1% of pixels
-    and calculating their center of mass.
-    """
-    # Flatten the image and sort pixel intensities
-    flat_diff = diff_image.flatten()
-    sorted_indices = np.argsort(flat_diff)[::-1]  # Sort in descending order
+    while True:
+        key = cv2.waitKey(1)
+        if key == 27 or len(selected_point) > 0:  # ESC key or point selected
+            break
 
-    # Determine the intensity threshold for the brightest 1% of pixels
-    threshold_index = int(0.0005 * len(sorted_indices))  # Top 1%
-    intensity_threshold = flat_diff[sorted_indices[threshold_index]]
+    cv2.destroyAllWindows()
 
-    # Create a binary mask for the brightest pixels
-    brightest_mask = (diff_image >= intensity_threshold).astype(np.uint8)
+    if not selected_point:
+        raise ValueError("No rotation point selected.")
+    return selected_point[0]
 
-    # Find coordinates of the brightest pixels
-    brightest_coords = np.column_stack(np.where(brightest_mask > 0))
+def image_bp(fp, led_id, angle):
+    image = cv2.imread(fp)
+    if image is None:
+        raise FileNotFoundError(f"Image not found at path: {fp}")
 
-    if len(brightest_coords) == 0:
-        raise ValueError("No bright pixels found in the image.")
+    orig = image.copy()
+    image_flipped = cv2.flip(image, 0)  # Flip to match bottom-left coordinate system
 
-    # Calculate the center of mass (average of the coordinates)
-    cx = int(np.mean(brightest_coords[:, 1]))
-    cy = int(np.mean(brightest_coords[:, 0]))
+    gray = cv2.cvtColor(image_flipped, cv2.COLOR_BGR2GRAY)
+    (_, _, _, max_loc) = cv2.minMaxLoc(gray)
 
-    return cx, cy, brightest_mask
-def add_debug_overlay(original_image_path, output_path, cx, cy, brightest_mask, led_id, angle):
-    """
-    Add a debug overlay to the image to visualize the brightest pixels,
-    the calculated center of mass (LED location), and the rotation axis (line).
-    """
-    original_image = cv2.imread(original_image_path)
+    # Overlay the detected LED position
+    cv2.circle(orig, max_loc, 2, (255, 0, 0), 2)
 
-    # Overlay the brightest pixels in blue
-    overlay = original_image.copy()
-    overlay[brightest_mask > 0] = [255, 0, 0]  # Brightest pixels in blue
-    debug_image = cv2.addWeighted(overlay, 0.5, original_image, 0.5, 0)
-
-    # Draw the center point (calculated LED location)
-    cv2.circle(debug_image, (cx, cy), 5, (0, 0, 255), -1)
-
-    # Annotate LED ID and coordinates
-    cv2.putText(
-        debug_image,
-        f"LED {led_id}: ({cx}, {cy})",
-        (cx + 10, cy - 10),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
-        (0, 0, 255),
-        2,
-    )
-
-    # Draw the rotation axis as a line
-    # cv2.line(debug_image, ROTATION_AXIS[0], ROTATION_AXIS[1], (0, 255, 0), 2)  # Line in green
-    cv2.circle(debug_image, IMAGE_CENTER, 2, (255, 255, 255), -1)  # Draw image center in white
-
-    # Add axis points text
-    cv2.putText(
-        debug_image,
-        f"Axis P1 ({ROTATION_AXIS[0][0]}, {ROTATION_AXIS[0][1]})",
-        (ROTATION_AXIS[0][0] + 10, ROTATION_AXIS[0][1] - 10),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
-        (0, 255, 0),
-        2,
-    )
-    cv2.putText(
-        debug_image,
-        f"Axis P2 ({ROTATION_AXIS[1][0]}, {ROTATION_AXIS[1][1]})",
-        (ROTATION_AXIS[1][0] + 10, ROTATION_AXIS[1][1] - 10),
-        cv2.FONT_HERSHEY_SIMPLEX,
-        0.5,
-        (0, 255, 0),
-        2,
-    )
-
-    # Draw a line connecting the LED location to the axis
-    closest_point = get_closest_point_on_line((cx, cy), ROTATION_AXIS[0], ROTATION_AXIS[1])
-    cv2.line(debug_image, (cx, cy), closest_point, (255, 255, 0), 1)
-
-    # Save the debug image
+    debug_image_path = os.path.join(OUTPUT_DIRECTORY, f"led_{led_id}_angle_{angle}_debug.jpg")
     os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
-    debug_output_path = os.path.join(OUTPUT_DIRECTORY, os.path.basename(output_path))
-    cv2.imwrite(debug_output_path, debug_image)
-    print(f"Debug image with axis saved to: {debug_output_path}")
+    cv2.imwrite(debug_image_path, orig)
+    print(f"Debug overlay saved at: {debug_image_path}")
 
-def get_closest_point_on_line(point, line_start, line_end):
-    """
-    Calculate the closest point on a line segment to a given point in 2D space.
-    """
-    px, py = point
-    x1, y1 = line_start
-    x2, y2 = line_end
-
-    # Line vector and point projection
-    line_vec = np.array([x2 - x1, y2 - y1])
-    point_vec = np.array([px - x1, py - y1])
-    line_len = np.dot(line_vec, line_vec)
-    if line_len == 0:  # Line segment is a single point
-        return line_start
-
-    projection = np.dot(point_vec, line_vec) / line_len
-    projection = max(0, min(1, projection))  # Clamp to [0, 1] for segment
-    closest_point = np.array([x1, y1]) + projection * line_vec
-    return int(closest_point[0]), int(closest_point[1])
+    return max_loc
 
 
-def calculate_dynamic_radius(positions_2d, axis):
-    """
-    Calculate the rotation radius dynamically based on the average perpendicular
-    distance from the rotation axis (line).
-    """
-    line_start, line_end = axis
-    distances = []
-    for cx, cy in positions_2d:
-        closest_point = get_closest_point_on_line((cx, cy), line_start, line_end)
-        distance = np.sqrt((cx - closest_point[0]) ** 2 + (cy - closest_point[1]) ** 2)
-        distances.append(distance)
-    return np.mean(distances)
+def calculate_3d_coordinates(positions_2d):
+    """Estimate the 3D coordinates of an LED based on its 2D positions at multiple angles."""
+    # Extract positions for each angle
+    angle0_pos = positions_2d[0]
+    angle90_pos = positions_2d[90]
+    angle180_pos = positions_2d[180]
+    angle270_pos = positions_2d[270]
 
-def calculate_3d_coordinates(positions_2d, rotation_radius):
-    """
-    Estimate the 3D coordinates of an LED based on its 2D positions at multiple angles.
-    Properly account for the geometry and avoid symmetric averaging mistakes.
-    """
-    coords_3d = []
-    for angle_deg, (cx, cy) in zip(ANGLES, positions_2d):
-        angle_rad = np.deg2rad(angle_deg)
-        x = rotation_radius * np.cos(angle_rad)
-        y = rotation_radius * np.sin(angle_rad)
-        z = cy  # Use the y-coordinate as depth (z-axis) from the 2D image
-        coords_3d.append((x, y, z))
+    # Convert positions to 3D coordinates
+    points_3d = np.array([
+        [0, angle0_pos[0], angle0_pos[1]],
+        [angle90_pos[0], 0, angle90_pos[1]],
+        [0, angle180_pos[0], angle180_pos[1]],
+        [angle270_pos[0], 0, angle270_pos[1]]
+    ])
 
-    # Compute averages directly in 3D space
-    avg_x = np.mean([p[0] for p in coords_3d])
-    avg_y = np.mean([p[1] for p in coords_3d])
-    avg_z = np.mean([p[2] for p in coords_3d])  # Z-axis remains straightforward
+    # Compute intermediate coordinates
+    first_coord = np.array([
+        points_3d[1, 0],  # angle90_x
+        points_3d[0, 1],  # angle0_y
+        (points_3d[0, 2] + points_3d[1, 2]) / 2  # Average of z-coordinates (angle0_z, angle90_z)
+    ])
 
-    if DEBUG_MODE:
-        print("3D Coordinates Debug Data:")
-        for idx, coord in enumerate(coords_3d):
-            print(f"Angle {ANGLES[idx]}°: X={coord[0]:.2f}, Y={coord[1]:.2f}, Z={coord[2]:.2f}")
+    second_coord_raw = np.array([
+        points_3d[3, 0],  # angle270_x
+        points_3d[2, 1],  # angle180_y
+        (points_3d[3, 2] + points_3d[2, 2]) / 2  # Average of z-coordinates (angle270_z, angle180_z)
+    ])
 
-    return avg_x, avg_y, avg_z
+    # Apply correction matrix
+    correction_matrix = np.array([-1, -1, 1])
+    second_coord = second_coord_raw * correction_matrix
+
+    # Compute average of the two coordinates
+    avg_coord = (first_coord + second_coord) / 2
+
+    print(f"Calculated 3D coord at {tuple(avg_coord)}")
+    return tuple(avg_coord)
 
 
 def process_led_images(led_id):
-    """
-    Process the 'on' and 'off' images for a specific LED and return its 3D coordinates.
-    """
-    positions_2d = []
+    """Process the 'on' and 'off' images for a specific LED and return its 3D coordinates."""
+    if ROTATION_POINT is None:
+        raise ValueError("Rotation point must be selected before processing images.")
+    #
+    positions_2d = {}
     for angle in ANGLES:
         on_image_path = os.path.join(INPUT_DIRECTORY, f"angle_{angle}", f"led_on_{led_id}.jpg")
-        off_image_path = os.path.join(INPUT_DIRECTORY, f"angle_{angle}", f"led_off_{led_id}.jpg")
 
-        # Calculate difference and thresholded images
-        diff_image, _ = calculate_difference_image(on_image_path, off_image_path)
+        led_coordinates = image_bp(on_image_path, led_id, angle)
+        ax, ay = led_coordinates
+        rx = ax - ROTATION_POINT[0]
+        ry =  ay - ROTATION_POINT[1]  # Adjust for bottom-left coordinate system
 
-        # Find 2D coordinates
-        cx, cy, brightest_mask = find_led_coordinates(diff_image)
-        positions_2d.append((cx, cy))
-
-        # Save debug overlay
-        add_debug_overlay(
-            on_image_path,
-            f"led_{led_id}_angle_{angle}_debug.jpg",
-            cx,
-            cy,
-            brightest_mask,
-            led_id,
-            angle,
-        )
-
-    # Dynamically calculate the rotation radius for this LED
-    rotation_radius = calculate_dynamic_radius(positions_2d, ROTATION_AXIS)
-
-    debug_2d_positions_file = os.path.join(OUTPUT_DIRECTORY, f"led_{led_id}_positions_2d.json")
-    with open(debug_2d_positions_file, "w") as debug_file:
-        json.dump({"led_positions_2d": positions_2d}, debug_file, indent=4)
-    print(f"2D positions saved to: {debug_2d_positions_file}")
-
-    # Estimate 3D coordinates
-    return calculate_3d_coordinates(positions_2d, rotation_radius)
-
-def select_rotation_axis(image_path):
-    """
-    Let the user manually select two points for the rotation axis on the image.
-    """
-    global ROTATION_AXIS
-    ROTATION_AXIS = []
-    points = []
-
-    def mouse_callback(event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            points.append((x, y))
-            print(f"Point selected: ({x}, {y})")
-            if len(points) == 2:
-                print(f"Rotation axis set: {points}")
-                cv2.destroyWindow("Select Rotation Axis")
-
-    # Load the image
-    image = cv2.imread(image_path)
-    if image is None:
-        raise FileNotFoundError(f"Image not found at {image_path}")
-
-    cv2.imshow("Select Rotation Axis", image)
-    cv2.setMouseCallback("Select Rotation Axis", mouse_callback)
-
-    # Wait until points are selected
-    while len(points) < 2:
-        cv2.waitKey(1)
-
-    # Cleanup windows
-    cv2.destroyAllWindows()
-
-    ROTATION_AXIS = points
-    return points
+        positions_2d[angle] = (rx, ry)
+        print(f"LED detected at: {(rx, ry)}")
+    return calculate_3d_coordinates(positions_2d)
 
 def main():
+    global ROTATION_POINT
+
+    # Allow user to select the rotation point
+    sample_image_path = os.path.join(INPUT_DIRECTORY, f"angle_0", f"led_on_0.jpg")
+
+    print("Select the rotation point from the displayed image.")
+    try:
+        ROTATION_POINT = select_rotation_point(sample_image_path)
+    except Exception as e:
+        print(f"Error during rotation point selection: {e}")
+        return
+
     led_positions_3d = []
     try:
         for led_id in range(LED_COUNT):
-            try:
-                print(f"Processing LED {led_id}...")
-                led_3d_coords = process_led_images(led_id)
-                led_positions_3d.append({
-                    "led_id": led_id,
-                    "x": led_3d_coords[0],
-                    "y": led_3d_coords[1],
-                    "z": led_3d_coords[2],
-                })
-                print(f"LED {led_id} detected at ({led_3d_coords[0]:.2f}, {led_3d_coords[1]:.2f}, {led_3d_coords[2]:.2f}).")
-            except Exception as e:
-                print(f"Error processing LED {led_id}: {e}")
+            print(f"Processing LED {led_id}...")
+            led_3d_coords = process_led_images(led_id)
+
+            led_positions_3d.append({
+                "led_id": led_id,
+                "x": led_3d_coords[0],
+                "y": led_3d_coords[1],
+                "z": led_3d_coords[2],
+            })
+            print(f"LED {led_id} detected at ({led_3d_coords[0]:.2f}, {led_3d_coords[1]:.2f}, {led_3d_coords[2]:.2f}).")
     except KeyboardInterrupt:
         print("Processing interrupted by user.")
     finally:
@@ -275,17 +156,5 @@ def main():
             json.dump(led_positions_3d, f, indent=4)
         print(f"3D LED positions saved to: {output_file}")
 
-    if DEBUG_MODE:
-        print(f"Solid Debugging Mode Enabled: {led_positions_3d}")
-
-# Ensure rotation axis is selected before running
 if __name__ == "__main__":
-    if ROTATION_AXIS is None:
-        example_image_path = os.path.join(INPUT_DIRECTORY, "angle_0", "led_on_0.jpg")
-
-        if os.path.exists(example_image_path):
-            print("Please select two points to define the rotation axis.")
-            ROTATION_AXIS = select_rotation_axis(example_image_path)  # User selects the axis
-    print(f"Selected Rotation Axis: {ROTATION_AXIS}")
-
     main()

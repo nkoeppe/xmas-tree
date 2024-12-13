@@ -12,6 +12,7 @@ MQTT_BROKER = config["mqtt_broker"]
 MQTT_LED_ON = config["mqtt_topics"]["led_on"]
 MQTT_LED_OFF = config["mqtt_topics"]["led_off"]
 MQTT_PHOTO_DONE = config["mqtt_topics"]["photo_done"]
+MQTT_PHOTO_SAMPLE_DONE = config["mqtt_topics"]["photo_sample_done"]
 MQTT_CYCLE_DONE = config["mqtt_topics"]["cycle_done"]
 MQTT_READY_NEXT_ANGLE = config["mqtt_topics"]["ready_next_angle"]
 CAMERA_INDEX = config["camera_index"]
@@ -32,7 +33,6 @@ def log_debug(message):
 def capture_image(status, led, angle):
     """Capture image and save it."""
     log_debug(f"Starting image capture for LED {led} at angle {angle}. Status: {status}")
-    time.sleep(0.15)  # Ensure LED state is stable
     os.makedirs(os.path.join(OUTPUT_DIRECTORY, f"angle_{angle}"), exist_ok=True)
     camera = cv2.VideoCapture(CAMERA_INDEX)
     ret, frame = camera.read()
@@ -68,7 +68,7 @@ def on_message(client, userdata, message):
     except Exception as e:
         log_debug(f"Error handling message on topic {message.topic}: {e}")
 
-def wait_for_flag(flag_name, timeout=120):
+def wait_for_flag(flag_name, timeout=600):
     """Wait for a flag to be set within a timeout."""
     log_debug(f"Waiting for {flag_name} to be set. Timeout: {timeout}s.")
     start_time = time.time()
@@ -78,6 +78,15 @@ def wait_for_flag(flag_name, timeout=120):
         time.sleep(0.1)
     globals()[flag_name] = False
     log_debug(f"{flag_name} acknowledged.")
+
+def take_sample_pics():
+    for angle in angles:
+        current_angle = angle
+        log_debug(f"Taking sample image at angle {angle}. Make sure the room light is on.")
+        capture_image("sample", -1, current_angle)
+        input(f"[INFO] Rotate the object to angle {angle}° and press Enter when ready...")
+    client.publish(MQTT_PHOTO_SAMPLE_DONE, 0)
+
 
 def main():
     global current_angle
@@ -90,6 +99,7 @@ def main():
         log_debug(f"Subscribed to topics: {MQTT_LED_ON}, {MQTT_LED_OFF}, {MQTT_CYCLE_DONE}.")
         client.loop_start()
         log_debug("MQTT loop started.")
+        take_sample_pics()
 
         for angle in angles:
             current_angle = angle
