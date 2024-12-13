@@ -52,7 +52,7 @@ def image_bp(fp, led_id, angle):
     (_, _, _, max_loc) = cv2.minMaxLoc(gray)
 
     # Overlay the detected LED position
-    cv2.circle(orig, max_loc, 2, (255, 0, 0), 2)
+    cv2.circle(image_flipped, max_loc, 2, (255, 0, 0), 2)
 
     debug_image_path = os.path.join(OUTPUT_DIRECTORY, f"led_{led_id}_angle_{angle}_debug.jpg")
     os.makedirs(OUTPUT_DIRECTORY, exist_ok=True)
