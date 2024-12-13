@@ -6,11 +6,10 @@ import json
 # Configuration
 INPUT_DIRECTORY = "./photos"
 OUTPUT_DIRECTORY = "./debug_output"
-LED_COUNT = 1
+LED_COUNT = 3
 ANGLES = [0, 90, 180, 270]  # Degrees
-IMAGE_CENTER = (320, 240)
-# ROTATION_AXIS = None
-ROTATION_AXIS = [(266, 150), (263, 400)]
+IMAGE_CENTER = (257, 260)
+ROTATION_AXIS = [(400, 260),(400, 260)]
 DEBUG_MODE = True
 TURN_DIRECTION = "left"
 def calculate_difference_image(on_image_path, off_image_path):
@@ -85,7 +84,8 @@ def add_debug_overlay(original_image_path, output_path, cx, cy, brightest_mask, 
     )
 
     # Draw the rotation axis as a line
-    cv2.line(debug_image, ROTATION_AXIS[0], ROTATION_AXIS[1], (0, 255, 0), 2)  # Line in green
+    # cv2.line(debug_image, ROTATION_AXIS[0], ROTATION_AXIS[1], (0, 255, 0), 2)  # Line in green
+    cv2.circle(debug_image, IMAGE_CENTER, 2, (255, 255, 255), -1)  # Draw image center in white
 
     # Add axis points text
     cv2.putText(
@@ -207,7 +207,7 @@ def process_led_images(led_id):
     # Dynamically calculate the rotation radius for this LED
     rotation_radius = calculate_dynamic_radius(positions_2d, ROTATION_AXIS)
 
-    debug_2d_positions_file = os.path.join(OUTPUT_DIRECTORY, "positions_2d.json")
+    debug_2d_positions_file = os.path.join(OUTPUT_DIRECTORY, f"led_{led_id}_positions_2d.json")
     with open(debug_2d_positions_file, "w") as debug_file:
         json.dump({"led_positions_2d": positions_2d}, debug_file, indent=4)
     print(f"2D positions saved to: {debug_2d_positions_file}")
