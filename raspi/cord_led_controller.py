@@ -72,9 +72,9 @@ def main():
         log_debug(f"Subscribed to topics: {MQTT_PHOTO_DONE}, {MQTT_READY_NEXT_ANGLE}, {MQTT_PHOTO_SAMPLE_DONE}.")
         client.loop_start()
         log_debug("MQTT loop started.")
-        wait_for_ack("photo_sample_done_flag")
 
         while True:  # Infinite loop for multiple angles
+            wait_for_ack("photo_sample_done_flag")
             for led in range(NUM_LEDS):
                 # Turn off all LEDs
                 strip.fill((0, 0, 0))

@@ -100,7 +100,7 @@ def main():
         log_debug("MQTT loop started.")
 
         for angle in angles:
-            take_sample_pic()
+            take_sample_pic(angle)
 
             current_angle = angle
             log_debug(f"Processing angle {angle}. Waiting for LED cycle to complete.")
