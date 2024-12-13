@@ -14,6 +14,7 @@ PIXEL_PIN = board.D18
 MQTT_LED_ON = config["mqtt_topics"]["led_on"]
 MQTT_LED_OFF = config["mqtt_topics"]["led_off"]
 MQTT_PHOTO_DONE = config["mqtt_topics"]["photo_done"]
+MQTT_PHOTO_SAMPLE_DONE = config["mqtt_topics"]["photo_sample_done"]
 MQTT_READY_NEXT_ANGLE = config["mqtt_topics"]["ready_next_angle"]
 MQTT_CYCLE_DONE = config["mqtt_topics"]["cycle_done"]
 BRIGHTNESS = config["brightness"]
@@ -26,6 +27,7 @@ client = mqtt.Client(client_id="RaspberryPi", callback_api_version=mqtt.Callback
 
 photo_done_flag = False
 ready_next_angle_flag = False
+photo_sample_done_flag = False
 
 def log_debug(message):
     """Utility to log debug messages."""
@@ -33,7 +35,7 @@ def log_debug(message):
     print(f"[DEBUG] {timestamp}: {message}")
 
 def on_message(client, userdata, message):
-    global photo_done_flag, ready_next_angle_flag
+    global photo_done_flag, ready_next_angle_flag,photo_sample_done_flag
     log_debug(f"Message received on topic {message.topic}: {message.payload.decode()}")
     if message.topic == MQTT_PHOTO_DONE:
         photo_done_flag = True
@@ -41,10 +43,13 @@ def on_message(client, userdata, message):
     elif message.topic == MQTT_READY_NEXT_ANGLE:
         ready_next_angle_flag = True
         log_debug("Ready next angle flag set.")
+    elif message.topic == MQTT_PHOTO_SAMPLE_DONE:
+        photo_sample_done_flag = True
+        log_debug("Ready next angle flag set.")
 
 def wait_for_ack(flag_name, timeout=120):
     """Wait for a flag to be set within a timeout."""
-    global photo_done_flag, ready_next_angle_flag
+    global photo_done_flag, ready_next_angle_flag, photo_sample_done_flag
     log_debug(f"Waiting for {flag_name} to be set. Timeout: {timeout}s.")
     start_time = time.time()
     while not globals()[flag_name]:
@@ -57,16 +62,17 @@ def wait_for_ack(flag_name, timeout=120):
 def main():
     strip.fill((0, 0, 0))
 
-    global photo_done_flag, ready_next_angle_flag
+    global photo_done_flag, ready_next_angle_flag, photo_sample_done_flag
 
     client.on_message = on_message
     try:
         log_debug("Connecting to MQTT broker.")
         client.connect(MQTT_BROKER)
-        client.subscribe([(MQTT_PHOTO_DONE, 0), (MQTT_READY_NEXT_ANGLE, 0)])
-        log_debug(f"Subscribed to topics: {MQTT_PHOTO_DONE}, {MQTT_READY_NEXT_ANGLE}.")
+        client.subscribe([(MQTT_PHOTO_DONE, 0), (MQTT_READY_NEXT_ANGLE, 0), (MQTT_PHOTO_SAMPLE_DONE,0)])
+        log_debug(f"Subscribed to topics: {MQTT_PHOTO_DONE}, {MQTT_READY_NEXT_ANGLE}, {MQTT_PHOTO_SAMPLE_DONE}.")
         client.loop_start()
         log_debug("MQTT loop started.")
+        wait_for_ack("photo_sample_done_flag")
 
         while True:  # Infinite loop for multiple angles
             for led in range(NUM_LEDS):
