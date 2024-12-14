@@ -3,3 +3,4 @@ debug_output
 photos
 .idea
 __pycache__
+node_modules
