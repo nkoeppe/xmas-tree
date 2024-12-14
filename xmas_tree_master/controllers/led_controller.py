@@ -78,4 +78,3 @@ class LEDController:
         if self.drymode:
             return
         self.pixels.show()  # Call to update NeoPixel hardware
-        pass

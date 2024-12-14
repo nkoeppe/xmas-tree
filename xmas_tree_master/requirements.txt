@@ -1,6 +1,7 @@
 adafruit-circuitpython-neopixel
 adafruit-blinka
-matplotlib
 flask
 numpy
 flask-socketio
+#rpi_ws281x
+paho-mqtt

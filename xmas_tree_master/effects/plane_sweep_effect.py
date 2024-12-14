@@ -7,7 +7,7 @@ class PlaneSweepEffect(Effect):
     the color of all LEDs below its height.
     """
 
-    def __init__(self, pixels, coords, speed=0.5, color=(255, 0, 0)):
+    def __init__(self, pixels, coords, speed=0.1, color=(0,255, 0)):
         super().__init__(pixels, coords)
         self.plane_height = 0  # Tracks the current height of the plane
         self.speed = speed  # Speed of the plane's movement
@@ -19,7 +19,7 @@ class PlaneSweepEffect(Effect):
             if coord[2] <= self.plane_height:
                 self.pixels[i] = self.color  # Set to target color
             else:
-                self.pixels[i] = [0, 0, 0]  # Reset LEDs above the plane
+                self.pixels[i] = (0, 0, 0)  # Reset LEDs above the plane
 
         # Increment the plane height and loop back if it exceeds the bounds
         self.plane_height += self.speed
