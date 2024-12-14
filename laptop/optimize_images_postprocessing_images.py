@@ -24,7 +24,7 @@ def image_bp(fp, dfp):
     cv2.circle(image_flipped, max_loc, 2, (255, 0, 0), 2)
 
     os.makedirs(DIRECTORY, exist_ok=True)
-    cv2.imwrite(dfp, orig)
+    cv2.imwrite(dfp, image_flipped)
     print(f"Debug overlay saved at: {dfp}")
 
     return max_loc
@@ -42,7 +42,7 @@ def capture_image(filename):
 def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    image_path = os.path.join(DIRECTORY, f"{timestamp}_test_led_debug.jpg")
+    image_path = os.path.join(DIRECTORY, f"{timestamp}_test_led.jpg")
     debug_image_path = os.path.join(DIRECTORY, f"{timestamp}_test_led_debug.jpg")
     capture_image(image_path)
     image_bp(image_path, debug_image_path)
