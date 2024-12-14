@@ -47,7 +47,7 @@ def plot_leds(controller, coords):
     finally:
         controller.stop()
 
-def generate_xmas_tree(num_points_foliage=100, num_points_trunk=10, height=200, radius=50, trunk_height=20,
+def generate_xmas_tree(num_points_foliage=200, num_points_trunk=10, height=200, radius=60, trunk_height=20,
                        trunk_radius=5):
     """
     Generate 3D coordinates for a Christmas tree.
@@ -98,11 +98,11 @@ if __name__ == "__main__":
     parser.add_argument("--effect", choices=["wave", "test", "plane-sweep"], default="wave", help="Select the effect to visualize.")
     args = parser.parse_args()
 
-    # coords = generate_xmas_tree()
-    coords = load_coords()
+    coords = generate_xmas_tree()
+    # coords = load_coords()
 
     # Initialize controller
-    controller = LEDController(coords, pixel_count=len(coords))
+    controller = LEDController(coords, pixel_count=len(coords),drymode=True)
 
     # Set and start the selected effect
     if args.effect == "wave":
