@@ -1,87 +1,62 @@
+from flask import Flask, render_template
+from flask_socketio import SocketIO, emit
+import numpy as np
+import threading
 from controllers.led_controller import LEDController
 from effects.wave_3d_effect import Wave3DEffect
-from effects.test_effect import TestEffect
-import numpy as np
-import matplotlib.pyplot as plt
-import argparse
-import json
-
-
 from effects.plane_sweep_effect import PlaneSweepEffect
+from effects.test_effect import TestEffect
+import argparse
 
+app = Flask(__name__)
+socketio = SocketIO(app)  # Enable WebSocket support
 
-def plot_leds(controller, coords):
-    """
-    Main thread function for plotting LEDs with Matplotlib.
-    Provides a zoomable and interactive 3D plot.
-    """
-    plt.ion()  # Enable interactive mode
-    fig = plt.figure(figsize=(12, 8))  # Increase figure size
-    ax = fig.add_subplot(111, projection="3d")
+controller = None  # Global controller instance
 
-    x, y, z = zip(*coords)
-    scatter = ax.scatter(x, y, z, c=[[0, 0, 0] for _ in coords], s=100)
-    ax.set_xlim([-100, 100])
-    ax.set_ylim([-100, 100])
-    ax.set_zlim([-100, 100])
-    ax.set_box_aspect([1, 1, 1])  # Equal aspect ratio
-
-    # Add labels for clarity
-    ax.set_xlabel("X Axis")
-    ax.set_ylabel("Y Axis")
-    ax.set_zlabel("Z Axis")
-
-    # Enable mouse rotation and zooming
-    fig.canvas.mpl_connect("scroll_event", lambda event: None)
-
-    try:
-        while controller.running:
-            pixels = controller.get_plot_data()
-            if pixels:
-                colors = [tuple(np.clip(np.array(color) / 255, 0, 1)) for color in pixels]
-                scatter.set_facecolor(colors)  # Correctly update scatter face colors
-                plt.draw()
-            plt.pause(0.05)
-    except Exception as e:
-        print(f"Error in plotting loop: {e}")
-    finally:
-        controller.stop()
 
 def generate_xmas_tree(num_points_foliage=200, num_points_trunk=10, height=200, radius=60, trunk_height=20,
                        trunk_radius=5):
-    """
-    Generate 3D coordinates for a Christmas tree.
-
-    :param num_points_foliage: Number of points for the foliage (cone shape).
-    :param num_points_trunk: Number of points for the trunk (cylinder shape).
-    :param height: Height of the tree.
-    :param radius: Base radius of the foliage cone.
-    :param trunk_height: Height of the trunk.
-    :param trunk_radius: Radius of the trunk cylinder.
-    :return: List of (x, y, z) tuples representing the tree.
-    """
     coords = []
-
-    # Generate foliage (cone shape)
     for _ in range(num_points_foliage):
-        z = np.random.uniform(0, height)  # Height along the tree
-        r = radius * (1 - z / height)  # Radius decreases as we go up
-        theta = np.random.uniform(0, 2 * np.pi)  # Random angle around the cone
+        z = np.random.uniform(0, height)
+        r = radius * (1 - z / height)
+        theta = np.random.uniform(0, 2 * np.pi)
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         coords.append((x, y, z))
 
-    # Generate trunk (cylinder shape)
     for _ in range(num_points_trunk):
-        z = np.random.uniform(-trunk_height, 0)  # Trunk is below foliage
-        theta = np.random.uniform(0, 2 * np.pi)  # Random angle around the cylinder
-        r = np.random.uniform(0, trunk_radius)  # Random distance from center (circular cross-section)
+        z = np.random.uniform(-trunk_height, 0)
+        theta = np.random.uniform(0, 2 * np.pi)
+        r = np.random.uniform(0, trunk_radius)
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         coords.append((x, y, z))
 
     return coords
 
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+def send_updates():
+    """Background thread to continuously send LED state to the browser."""
+    while controller and controller.running:
+        pixels = controller.get_plot_data()
+        if pixels:
+            colors = [tuple(np.clip(np.array(color) / 255, 0, 1)) for color in pixels]
+            socketio.emit("update_leds", {"colors": colors})
+        socketio.sleep(0.1)  # Adjust the interval as needed
+
+
+@socketio.on("connect")
+def on_connect():
+    """Handle browser connection."""
+    print("Client connected")
+    coords = controller.coords if controller else []
+    socketio.emit("init_coords", {"coords": coords})
 
 def load_coords():
     """
@@ -91,8 +66,6 @@ def load_coords():
         coords = json.load(file)  # Load the JSON array directly
     return [tuple(coord) for coord in coords]  # Convert each coordinate to a tuple
 
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="3D LED Effect Visualizer")
     parser.add_argument("--effect", choices=["wave", "test", "plane-sweep"], default="wave", help="Select the effect to visualize.")
@@ -101,10 +74,8 @@ if __name__ == "__main__":
     coords = generate_xmas_tree()
     # coords = load_coords()
 
-    # Initialize controller
-    controller = LEDController(coords, pixel_count=len(coords),drymode=True)
+    controller = LEDController(coords, pixel_count=len(coords), drymode=True)
 
-    # Set and start the selected effect
     if args.effect == "wave":
         effect = Wave3DEffect(controller.pixels, controller.coords)
     elif args.effect == "plane-sweep":
@@ -112,16 +83,11 @@ if __name__ == "__main__":
     else:
         effect = TestEffect(controller.pixels, controller.coords)
 
-
     controller.set_effect(effect)
 
-    # Start the controller
-    controller.start()
+    # Start the controller in a separate thread
+    threading.Thread(target=controller.start, daemon=True).start()
 
-    # Start the plot (in the main thread)
-    try:
-        print("Press Ctrl+C to exit.")
-        plot_leds(controller, coords)
-    except KeyboardInterrupt:
-        controller.stop()
-        print("Exiting...")
+    # Start the Flask-SocketIO server with the background update thread
+    socketio.start_background_task(send_updates)
+    socketio.run(app, host="0.0.0.0", port=5000)

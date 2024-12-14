@@ -1,3 +1,6 @@
 adafruit-circuitpython-neopixel
 adafruit-blinka
 matplotlib
+flask
+numpy
+flask-socketio
