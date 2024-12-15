@@ -13,18 +13,14 @@ app.use(express.json()); // Middleware to parse JSON body
 
 // Endpoint to handle effect selection
 app.post('/send-effect', (req, res) => {
-    const { effect } = req.body;
+    const {body} = req;
 
-    if (!effect) {
-        return res.status(400).json({ success: false, error: 'Effect is required.' });
-    }
-
-    mqttClient.publish(MQTT_TOPIC, JSON.stringify({ effect }), (err) => {
+    mqttClient.publish(MQTT_TOPIC, JSON.stringify(body), (err) => {
         if (err) {
             console.error('Failed to publish effect:', err);
             return res.status(500).json({ success: false, error: 'Failed to send effect to MQTT.' });
         }
-        console.log(`Effect "${effect}" sent to topic "${MQTT_TOPIC}"`);
+        console.log(`Effect "${body.effect_name}" sent to topic "${MQTT_TOPIC}"`);
         res.json({ success: true });
     });
 });

@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "nodemon index.js"
   },
   "author": "",
   "license": "ISC",
@@ -11,6 +12,7 @@
   "dependencies": {
     "express": "^4.21.2",
     "mqtt": "^5.10.3",
+    "nodemon": "^3.1.9",
     "socket.io": "^4.8.1",
     "three": "^0.171.0"
   }

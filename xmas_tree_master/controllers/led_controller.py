@@ -17,6 +17,11 @@ class LEDController:
         :param pixel_count: Total number of LEDs.
         """
         self.coords = coords
+
+        z_values = [coord[2] for coord in coords]
+
+        self.min_y = min(z_values)
+        self.max_y =  max(z_values)
         self.drymode = drymode
         if not self.drymode:
             import neopixel

@@ -11,21 +11,74 @@
         <h1>LED Effect Controller</h1>
         <label for="effect-selector">Select Effect:</label>
         <select id="effect-selector">
-            <option value="wave">Wave</option>
+            <option value="random">Random</option>
             <option value="plane-sweep">Plane Sweep</option>
-            <option value="test">Test</option>
+            <option value="sparkle">Twinkling Sparkle</option>
+            <option value="two-plain">Two Plain Collision</option>
+            <option value="wave">Wave</option>
         </select>
         <button id="send-effect-btn">Send Effect</button>
+
+        <h3 style="margin-top: 30px;">Custom Configuration</h3>
+        <div id="config-container" style="margin-top: 10px;">
+            <!-- Dynamic config inputs will go here -->
+        </div>
+        <button id="add-config-btn" style="margin-top: 10px;">Add Config Property</button>
+
         <p id="status" style="margin-top: 20px; font-weight: bold;"></p>
     </div>
 
     <script>
         const MQTT_TOPIC = 'led/effect'; // Same as in index.js
 
-        // Send selected effect to MQTT
+        // Add a new key-value input pair to the config container
+        document.getElementById('add-config-btn').addEventListener('click', () => {
+            const container = document.getElementById('config-container');
+
+            const div = document.createElement('div');
+            div.style.marginBottom = '10px';
+            div.className = 'config-entry';
+
+            const keyInput = document.createElement('input');
+            keyInput.type = 'text';
+            keyInput.placeholder = 'Key';
+            keyInput.style.marginRight = '10px';
+
+            const valueInput = document.createElement('input');
+            valueInput.type = 'text';
+            valueInput.placeholder = 'Value';
+            valueInput.style.marginRight = '10px';
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Delete';
+            deleteButton.style.marginLeft = '10px';
+            deleteButton.addEventListener('click', () => {
+                container.removeChild(div);
+            });
+
+            div.appendChild(keyInput);
+            div.appendChild(valueInput);
+            div.appendChild(deleteButton);
+
+            container.appendChild(div);
+        });
+
+        // Gather the configuration and send the effect
         document.getElementById('send-effect-btn').addEventListener('click', () => {
             const selectedEffect = document.getElementById('effect-selector').value;
-            const payload = JSON.stringify({ effect: selectedEffect });
+
+            // Collect custom config
+            const config = {};
+            const entries = document.querySelectorAll('.config-entry');
+            entries.forEach(entry => {
+                const key = entry.querySelector('input[placeholder="Key"]').value;
+                const value = entry.querySelector('input[placeholder="Value"]').value;
+                if (key) {
+                    config[key] = value; // Add key-value pair to the config
+                }
+            });
+
+            const payload = JSON.stringify({ effect_name: selectedEffect, config });
 
             fetch('/send-effect', {
                 method: 'POST',
@@ -36,7 +89,7 @@
                 .then(data => {
                     const status = document.getElementById('status');
                     if (data.success) {
-                        status.textContent = `Effect "${selectedEffect}" sent successfully.`;
+                        status.textContent = `Effect "${selectedEffect}" sent successfully with config: ${JSON.stringify(config)}.`;
                         status.style.color = 'green';
                     } else {
                         status.textContent = `Failed to send effect: ${data.error}`;

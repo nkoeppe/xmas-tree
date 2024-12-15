@@ -1,5 +1,4 @@
 import numpy as np
-import json
 
 def generate_xmas_tree(num_points_foliage=200, num_points_trunk=10, height=200, radius=60, trunk_height=20,
                        trunk_radius=5):
@@ -35,13 +34,4 @@ def generate_xmas_tree(num_points_foliage=200, num_points_trunk=10, height=200, 
         coords.append((x, y, z))
 
     return coords
-
-
-def load_coords():
-    """
-    Load coordinates from a JSON file.
-    """
-    with open("coords.json", "r") as file:
-        coords = json.load(file)
-    return [tuple(coord) for coord in coords]
 
