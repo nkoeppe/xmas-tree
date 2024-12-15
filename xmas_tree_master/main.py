@@ -1,9 +1,15 @@
+import threading
+import time
+
 import matplotlib
-# Switch to WebAgg backend before pyplot import
+
 matplotlib.use('webagg')
+from matplotlib.animation import FuncAnimation
+
 from matplotlib import rcParams
-rcParams['webagg.address'] = '0.0.0.0'  # Listen on all interfaces
-rcParams['webagg.port'] = 8888          # Set desired port
+rcParams['webagg.address'] = '0.0.0.0'
+rcParams['webagg.port'] = 8888
+rcParams['webagg.open_in_browser'] = False
 
 from controllers.led_controller import LEDController
 import numpy as np
@@ -15,43 +21,11 @@ from utils.generate_xmas_tree_coords import generate_xmas_tree
 from controllers.effect_controller import EffectController
 from effects.register_effects import registered_effects
 
+
 coords = None
 min_z = None
 max_z = None
 print(f"Registered effects: {registered_effects}")
-
-def plot_leds(controller, coords):
-    """
-    Main thread function for plotting LEDs with Matplotlib.
-    Provides a zoomable and interactive 3D plot accessible via browser.
-    """
-    plt.ion()
-    fig = plt.figure(figsize=(12, 8))
-    ax = fig.add_subplot(111, projection="3d")
-
-    x, y, z = zip(*coords)
-    scatter = ax.scatter(x, y, z, c=[[0, 0, 0] for _ in coords], s=100)
-    ax.set_xlim([-100, 100])
-    ax.set_ylim([-100, 100])
-    ax.set_zlim([-100, 100])
-    ax.set_box_aspect([1, 1, 1])
-
-    ax.set_xlabel("X Axis")
-    ax.set_ylabel("Y Axis")
-    ax.set_zlabel("Z Axis")
-
-    try:
-        while controller.running:
-            pixels = controller.get_plot_data()
-            if pixels:
-                colors = [tuple(np.clip(np.array([color[1], color[2], color[0]]) / 255, 0, 1)) for color in pixels]
-                scatter.set_facecolor(colors)
-                plt.draw()
-            plt.pause(0.05)
-    except Exception as e:
-        print(f"Error in plotting loop: {e}")
-    finally:
-        controller.stop()
 
 def on_message(client, userdata, message):
     """
@@ -67,16 +41,50 @@ def on_message(client, userdata, message):
     except Exception as e:
         print(f"Error handling MQTT message: {e}")
 
+def plot_leds(controller, coords):
+    """
+    Live-updating 3D LED plot using Matplotlib's FuncAnimation.
+    """
+    fig = plt.figure(figsize=(12, 8))
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Extract coordinates
+    x, y, z = zip(*coords)
+    scatter = ax.scatter(x, y, z, c=[[0, 0, 0] for _ in coords], s=100)
+
+    ax.set_xlim([-100, 100])
+    ax.set_ylim([-100, 100])
+    ax.set_zlim([-100, 100])
+    ax.set_box_aspect([1, 1, 1])
+
+    ax.set_xlabel("X Axis")
+    ax.set_ylabel("Y Axis")
+    ax.set_zlabel("Z Axis")
+
+    def update(frame):
+        """
+        Animation update function.
+        """
+        pixels = controller.get_plot_data()
+        if pixels:
+            # Normalize colors for Matplotlib
+            colors = [tuple(np.array([c[0], c[1], c[2]]) / 255) for c in pixels]
+            scatter.set_color(colors)
+
+    # Use FuncAnimation to update the plot
+    ani = FuncAnimation(fig, update, interval=5,cache_frame_data=False)
+
+    plt.show()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="3D LED Effect Visualizer")
     parser.add_argument("--effect", choices=["wave", "test", "plane-sweep", "two-plain"], default="wave", help="Select the effect to visualize.")
-    parser.add_argument('--render', help="Flag wether ro render a 3d plot.", action=argparse.BooleanOptionalAction)
+    parser.add_argument('--render', help="Flag whether to render a 3D plot.", action=argparse.BooleanOptionalAction)
     parser.add_argument('--dry', help="Run in dry run.", action=argparse.BooleanOptionalAction)
 
     args = parser.parse_args()
 
     coords = generate_xmas_tree()
-
     render_plot = args.render or False
     dry_mode = args.dry or False
 
@@ -95,14 +103,15 @@ if __name__ == "__main__":
     controller.start()
 
     try:
-        print("Press Ctrl+C to exit.")
         if render_plot:
             plot_leds(controller, coords)
         else:
             while controller.running:
-                pass
+                time.sleep(1)
+
     except KeyboardInterrupt:
+        print("Stopping...")
         controller.stop()
-        mqtt_client.loop_stop()
-        mqtt_client.disconnect()
+
+    finally:
         print("Exiting...")
