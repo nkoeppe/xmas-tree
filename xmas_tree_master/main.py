@@ -1,10 +1,16 @@
+import matplotlib
+# Switch to WebAgg backend before pyplot import
+matplotlib.use('webagg')
+from matplotlib import rcParams
+rcParams['webagg.address'] = '0.0.0.0'  # Listen on all interfaces
+rcParams['webagg.port'] = 8888          # Set desired port
+
 from controllers.led_controller import LEDController
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
 import json
 import paho.mqtt.client as mqtt
-
 from utils.generate_xmas_tree_coords import generate_xmas_tree
 from controllers.effect_controller import EffectController
 from effects.register_effects import registered_effects
@@ -14,11 +20,10 @@ min_z = None
 max_z = None
 print(f"Registered effects: {registered_effects}")
 
-
 def plot_leds(controller, coords):
     """
     Main thread function for plotting LEDs with Matplotlib.
-    Provides a zoomable and interactive 3D plot.
+    Provides a zoomable and interactive 3D plot accessible via browser.
     """
     plt.ion()
     fig = plt.figure(figsize=(12, 8))
@@ -71,28 +76,24 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     coords = generate_xmas_tree()
-    # coords = load_coords()
 
     render_plot = args.render or False
     dry_mode = args.dry or False
 
-    # Initialize controller
     controller = LEDController(coords, pixel_count=len(coords), drymode=dry_mode)
     effect_controller = EffectController(controller)
 
     if args.effect:
         effect_controller.change_effect(args.effect)
 
-    mqtt_client = mqtt.Client( mqtt.CallbackAPIVersion.VERSION2)
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     mqtt_client.on_message = on_message
     mqtt_client.connect("fancyguysdev.de")
     mqtt_client.subscribe("led/effect")
     mqtt_client.loop_start()
 
-    # Start the controller
     controller.start()
 
-    # Start the plot (in the main thread)
     try:
         print("Press Ctrl+C to exit.")
         if render_plot:
