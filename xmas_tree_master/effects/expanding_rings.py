@@ -1,18 +1,31 @@
+import math
+
 from abstracts.effect import Effect
+from decoratos.register_effect import RegisterEffect
+from utils.get_tuple_from_json_array import get_tuple_from_json_array
 
 
+@RegisterEffect()
 class ExpandingRingsEffect(Effect):
     """
     Circular rings that expand and contract from the center.
     """
-    def __init__(self, pixels, coords, center, speed=1, max_radius=50, color=(255, 0, 0)):
-        super().__init__(pixels, coords)
-        self.center = center
+    effect_selector = 'expanding-rings'
+
+    default_config = {
+        "speed": 1,
+        "max_radius": 100,
+        "color": (255, 255, 0),
+    }
+
+    def __init__(self, **kwargs):
+        super().__init__( **kwargs)
+
         self.radius = 0
         self.radius_direction = 1
-        self.speed = speed
-        self.max_radius = max_radius
-        self.color = color
+        self.speed = self.get_config('speed', float)
+        self.max_radius = self.get_config('max_radius', float)
+        self.color = self.get_config('color', get_tuple_from_json_array)
 
     def update(self):
         for i, coord in enumerate(self.coords):

@@ -7,15 +7,15 @@ from decoratos.register_effect import RegisterEffect
 LEDs are BRG Ordered. Colors have to be set like x = (b, r, g). The update method gets called once per rendering frame.
 """
 @RegisterEffect()
-
 class RandomEffect(Effect):
     """
     Random effect that cycles through predefined colors.
     """
     effect_selector = 'random'
+    default_config = None
 
-    def __init__(self, pixels, coords, **kwargs):
-        super().__init__(pixels, coords, **kwargs)
+    def __init__(self,  **kwargs):
+        super().__init__( **kwargs)
         self.colors = [
             (0, 255, 0),   # Green
             (255, 0, 0),   # Red
@@ -26,7 +26,7 @@ class RandomEffect(Effect):
             (255, 255, 255), # White
             (128, 128, 128), # Gray
         ]
-        self.current_colors = [random.choice(self.colors) for _ in range(len(pixels))]
+        self.current_colors = [random.choice(self.colors) for _ in range(len(self.pixels))]
 
     def update(self):
         for i in range(len(self.pixels)):

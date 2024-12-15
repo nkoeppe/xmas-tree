@@ -16,8 +16,8 @@ class TwinklingSparkleEffect(Effect):
         "gradient_speed": 0.02,
     }
 
-    def __init__(self, pixels, coords, **kwargs):
-        super().__init__(pixels, coords, **kwargs)
+    def __init__(self,  **kwargs):
+        super().__init__( **kwargs)
         self.sparkle_chance = float(self.config.get('sparkle_chance', self.default_config['sparkle_chance']))
         self.pulse_speed = float(self.config.get('pulse_speed', self.default_config['pulse_speed']))
         self.gradient_speed = float(self.config.get('gradient_speed', self.default_config['gradient_speed']))

@@ -1,7 +1,8 @@
 from abstracts.effect import Effect
-
 from decoratos.register_effect import RegisterEffect
 import json
+
+from utils.get_tuple_from_json_array import get_tuple_from_json_array
 
 """
 LEDs are BRG ordered. Colors should be set as tuples, e.g., x = (b, r, g). 
@@ -24,7 +25,7 @@ class TwoPlainCollisionEffect(Effect):
         "plane_height": 5,
 
     }
-    def __init__(self,  pixels, coords, **kwargs): #pixels, coords, min_max_y, speed=1, color1=(0, 255, 0), color2=(255, 0, 0), plane_height=10):
+    def __init__(self, **kwargs): #pixels, coords, min_max_y, speed=1, color1=(0, 255, 0), color2=(255, 0, 0), plane_height=10):
         """
         Initializes the effect with given parameters.
 
@@ -36,23 +37,13 @@ class TwoPlainCollisionEffect(Effect):
         :param plane_height: Height of each plane
         """
 
-        super().__init__(pixels, coords, **kwargs)
+        super().__init__(**kwargs)
 
-        print(self.config)
-        self.plane_height = int(self.config['plane_height']) if 'plane_height' in self.config else self.default_config[
-            'plane_height']
-        self.speed = float(self.config['speed']) if 'speed' in self.config else self.default_config[
-            'speed']
+        self.speed = self.get_config('speed', float)
+        self.plane_height = self.get_config('plane_height', float)
 
-
-
-        self.color1 = tuple(json.loads(self.config['color1'])) if 'color1' in self.config else self.default_config[
-            'color1']
-        self.color2 = tuple(json.loads(self.config['color2'])) if 'color2' in self.config else self.default_config[
-            'color2']
-
-        self.min_y = self.config['min_y']
-        self.max_y = self.config['max_y']
+        self.color1 = self.get_config('color1', get_tuple_from_json_array)
+        self.color2 = self.get_config('color2', get_tuple_from_json_array)
 
         # Initialize planes' positions and directions
         self.plane_1_y = self.min_y - self.plane_height / 2

@@ -1,24 +1,28 @@
 from abstracts.effect import Effect
 import sys
 
+from decoratos.register_effect import RegisterEffect
+
+
+@RegisterEffect()
 class ColorGradientSweepEffect(Effect):
     """
     Sweeping gradient colors through the LEDs within moving planes.
     """
-    def __init__(self, **kwargs):
-        pixels = kwargs['pixels']
-        coords = kwargs['coords']
-        min_max_y = kwargs['min_max_y']
-        plane_height = kwargs['plane_height']
-        speed = kwargs['speed']
+    effect_selector = 'color-gradient'
 
+    default_config = {
+        "speed": 1,
+        "plane_height": 5,
+    }
+    def __init__(self,  **kwargs):
 
-        super().__init__(pixels, coords)
-        self.min_y, self.max_y = min_max_y
-        self.plane_height = plane_height
-        self.plane_pos = self.min_y - plane_height / 2
+        super().__init__(**kwargs)
+        self.plane_height = self.get_config('plane_height', float)
+        self.speed = self.get_config('speed', float)
+
+        self.plane_pos = self.min_y - self.plane_height / 2
         self.plane_direction = 1
-        self.speed = speed
 
     def get_gradient_color(self, coord_z):
         """Returns a gradient color based on the Z-coordinate."""

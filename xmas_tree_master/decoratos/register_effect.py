@@ -9,6 +9,8 @@ def RegisterEffect():
         if not hasattr(effect_class, "effect_selector"):
             raise ValueError("Effect class must have an 'effect_selector' attribute.")
 
+        print(f"Registering effect: {effect_class.effect_selector}")
+
         EffectRegistry.register(effect_class.effect_selector, effect_class)
         return effect_class
 

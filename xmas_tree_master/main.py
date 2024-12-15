@@ -72,7 +72,7 @@ def plot_leds(controller, coords):
             scatter.set_color(colors)
 
     # Use FuncAnimation to update the plot
-    ani = FuncAnimation(fig, update, interval=5,cache_frame_data=False)
+    ani = FuncAnimation(fig, update, interval=0.3, cache_frame_data=False)
 
     plt.show()
 

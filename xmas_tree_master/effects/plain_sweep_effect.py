@@ -1,8 +1,7 @@
 from abstracts.effect import Effect
-
-from abstracts.effect import Effect
-
 from decoratos.register_effect import RegisterEffect
+
+from utils.get_tuple_from_json_array import get_tuple_from_json_array
 
 """
 LEDs are BRG Ordered. Colors have to be set like x = (b, r, g). The update method gets called once per rendering frame.
@@ -16,11 +15,16 @@ class PlaneSweepEffect(Effect):
     """
     effect_selector = 'plane-sweep'
 
-    def __init__(self, pixels, coords, speed=0.1, color=(0,255, 0)):
-        super().__init__(pixels, coords)
-        self.plane_height = 0  # Tracks the current height of the plane
-        self.speed = speed  # Speed of the plane's movement
-        self.color = color  # Color applied to LEDs below the plane
+    default_config = {
+        "speed": 0.1,
+        "color": (0, 255, 0),
+    }
+    def __init__(self,  **kwargs):
+        super().__init__( **kwargs)
+        self.plane_height = 0
+        self.speed = self.get_config('speed', float)
+        self.color = self.get_config('color', get_tuple_from_json_array)
+
 
     def update(self):
         for i, coord in enumerate(self.coords):

@@ -1,22 +1,41 @@
 from abstracts.effect import Effect
 
+from utils.get_tuple_from_json_array import get_tuple_from_json_array
+
+from decoratos.register_effect import RegisterEffect
+
+
+@RegisterEffect()
 class FourPlaneCollisionEffect(Effect):
     """
     Four planes move vertically and horizontally, creating a crisscrossing effect.
     """
-    def __init__(self, pixels, coords, min_max_y, min_max_x, speed=1, colors=((0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)), plane_height=10):
-        super().__init__(pixels, coords)
-        self.min_y, self.max_y = min_max_y
-        self.min_x, self.max_x = min_max_x
-        self.plane_height = plane_height
-        self.speed = speed
+    effect_selector = 'four-plain-collision'
+    default_config = {
+        "speed": 1,
+        "plane_height": 5,
+        "color_1": (255, 255, 0),
+        "color_2": (255, 0, 0),
+        "color_3": (255, 0,255),
+        "color_4": (0, 0, 255),
+    }
+
+
+    def __init__(self, **kwargs): # min_max_y, min_max_x, speed=1, colors=((0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)), plane_height=10):
+        super().__init__(**kwargs)
+        self.speed = self.get_config('speed', float)
+        self.plane_height = self.get_config('plane_height', float)
+        self.color_1 = self.get_config('color_1', get_tuple_from_json_array)
+        self.color_2 = self.get_config('color_2', get_tuple_from_json_array)
+        self.color_3 = self.get_config('color_3', get_tuple_from_json_array)
+        self.color_4 = self.get_config('color_4', get_tuple_from_json_array)
 
         # Initialize plane positions and directions
         self.planes = [
-            {"pos": self.min_y - plane_height / 2, "direction": 1, "axis": "y", "color": colors[0]},
-            {"pos": self.max_y + plane_height / 2, "direction": -1, "axis": "y", "color": colors[1]},
-            {"pos": self.min_x - plane_height / 2, "direction": 1, "axis": "x", "color": colors[2]},
-            {"pos": self.max_x + plane_height / 2, "direction": -1, "axis": "x", "color": colors[3]},
+            {"pos": self.min_y - self.plane_height / 2, "direction": 1, "axis": "y", "color": self.color_1},
+            {"pos": self.max_y + self.plane_height / 2, "direction": -1, "axis": "y", "color": self.color_2},
+            {"pos": self.min_x - self.plane_height / 2, "direction": 1, "axis": "x", "color": self.color_3},
+            {"pos": self.max_x + self.plane_height / 2, "direction": -1, "axis": "x", "color": self.color_4},
         ]
 
     def update(self):
