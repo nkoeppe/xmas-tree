@@ -3,7 +3,6 @@ adafruit-blinka
 flask
 numpy
 flask-socketio
-#rpi_ws281x
 paho-mqtt
 mpld3
 tornado
