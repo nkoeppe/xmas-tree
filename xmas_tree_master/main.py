@@ -2,6 +2,8 @@ import time
 
 import matplotlib
 
+from utils.load_coords import load_coords
+
 matplotlib.use('webagg')
 from matplotlib.animation import FuncAnimation
 
@@ -83,7 +85,8 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    coords = generate_xmas_tree()
+    # coords = generate_xmas_tree()
+    coords = load_coords()
     render_plot = args.render or False
     dry_mode = args.dry or False
 
