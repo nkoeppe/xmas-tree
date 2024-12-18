@@ -21,7 +21,7 @@ class FourPlaneCollisionEffect(Effect):
     }
 
 
-    def __init__(self, **kwargs): # min_max_y, min_max_x, speed=1, colors=((0, 255, 0), (255, 0, 0), (0, 0, 255), (255, 255, 0)), plane_height=10):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.speed = self.get_config('speed', float)
         self.plane_height = self.get_config('plane_height', float)

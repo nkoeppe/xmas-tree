@@ -25,7 +25,7 @@ class TwoPlainCollisionEffect(Effect):
         "plane_height": 5,
 
     }
-    def __init__(self, **kwargs): #pixels, coords, min_max_y, speed=1, color1=(0, 255, 0), color2=(255, 0, 0), plane_height=10):
+    def __init__(self, **kwargs):
         """
         Initializes the effect with given parameters.
 

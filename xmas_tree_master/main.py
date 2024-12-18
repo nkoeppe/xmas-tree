@@ -1,4 +1,3 @@
-import threading
 import time
 
 import matplotlib
@@ -19,7 +18,7 @@ import json
 import paho.mqtt.client as mqtt
 from utils.generate_xmas_tree_coords import generate_xmas_tree
 from controllers.effect_controller import EffectController
-from effects.register_effects import registered_effects
+from utils.register_effects import registered_effects
 
 
 coords = None
