@@ -1,7 +1,6 @@
-from abstracts.effect import Effect
 import numpy as np
-
 from decoratos.register_effect import RegisterEffect
+from abstracts.effect import Effect
 
 """
 LEDs are BRG Ordered. Colors have to be set like x = (b, r, g). The update method gets called once per rendering frame.
@@ -12,9 +11,10 @@ class Wave3DEffect(Effect):
     3D Wave Effect using sine waves to create a dynamic flow of colors.
     """
     effect_selector = 'wave'
+    default_config = None
 
-    def __init__(self, pixels, coords, **kwargs):
-        super().__init__(pixels, coords, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.time = 0  # Keeps track of time for animation
 
 

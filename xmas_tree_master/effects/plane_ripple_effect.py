@@ -1,20 +1,36 @@
+import math
 
 from abstracts.effect import Effect
+from decoratos.register_effect import RegisterEffect
+import json
 
-class PlaneRippleEffect(Effect):
+from utils.get_tuple_from_json_array import get_tuple_from_json_array
+
+
+@RegisterEffect()
+class PlainRippleEffect(Effect):
     """
     Wavy planes that oscillate as they move.
     """
-    def __init__(self, pixels, coords, min_max_y, speed=1, plane_height=10, frequency=0.1, amplitude=5, color=(255, 255, 0)):
-        super().__init__(pixels, coords)
-        self.min_y, self.max_y = min_max_y
-        self.plane_height = plane_height
-        self.plane_pos = self.min_y - plane_height / 2
+    effect_selector = 'plain-ripple'
+
+    default_config = {
+        "speed": 1,
+        "plane_height": 5,
+        "frequency": 0.1,
+        "amplitude": 5,
+        "color": (255, 255, 0),
+    }
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.speed = self.get_config('speed', float)
+        self.plane_height = self.get_config('plane_height', float)
+        self.frequency = self.get_config('frequency', float)
+        self.amplitude = self.get_config('amplitude', float)
+        self.color = self.get_config('color', get_tuple_from_json_array)
+
+        self.plane_pos = self.min_y - self.plane_height / 2
         self.plane_direction = 1
-        self.speed = speed
-        self.frequency = frequency
-        self.amplitude = amplitude
-        self.color = color
 
     def get_wave_height(self, x):
         """Calculates the Y-offset for the wave based on X-coordinate."""

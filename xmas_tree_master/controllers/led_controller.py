@@ -18,10 +18,27 @@ class LEDController:
         """
         self.coords = coords
 
-        z_values = [coord[2] for coord in coords]
+        # coords = [(0,0,0), (1,0,0), (0,1,1)]
+        self.z_values = [coord[2] for coord in coords]
 
-        self.min_y = min(z_values)
-        self.max_y =  max(z_values)
+        self.x_values = [coord[0] for coord in coords]
+        self.y_values = [coord[1] for coord in coords]
+
+        self.min_y = min(self.z_values)
+        self.max_y =  max(self.z_values)
+
+        self.min_x = min(self.x_values)
+        self.max_x =  max(self.x_values)
+
+        self.min_z = min(self.z_values)
+        self.max_z =  max(self.z_values)
+
+        self.three_d_center = (
+            sum(self.x_values) / len(coords),
+            sum(self.y_values) / len(coords),
+            sum(self.z_values) / len(coords),
+        )
+
         self.drymode = drymode
         if not self.drymode:
             import neopixel
@@ -62,7 +79,7 @@ class LEDController:
             self.effect.update()
             self.render_neopixels()
             self.plot_queue.put(self.pixels)  # Send updated pixels to the plot
-            time.sleep(0.05)  # Adjust for desired frame rate
+            time.sleep(1/30)  # Adjust for desired frame rate
 
     def get_plot_data(self):
         """
