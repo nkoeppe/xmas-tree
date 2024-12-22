@@ -1,8 +1,4 @@
 {
   "mqtt_broker": "fancyguysdev.de",
-  "num_leds": 3,
-  "brightness": 0.1,
-  "gpio_pin": 18,
-  "mqtt_topics": {
-  }
+  "client_id": "local_mock"
 }

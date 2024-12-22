@@ -1,115 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Set LED Effect</title>
-    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>LED Effect Controller</title>
+    <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div style="margin: 50px; text-align: center;">
-        <h1>LED Effect Controller</h1>
-        <label for="effect-selector">Select Effect:</label>
-        <select id="effect-selector">
-            <option value="random">Random</option>
-            <option value="color-gradient">Color Gradient</option>
-            <option value="expanding-rings">Expanding Rings</option>
-            <option value="plane-sweep">Plain Sweep</option>
-            <option value="plain-ripple">Plain Ripple</option>
-            <option value="sparkle">Twinkling Sparkle</option>
-            <option value="two-plain">Two Plain Collision</option>
-            <option value="four-plain-collision">Four Plain Collision</option>
-            <option value="wave">Wave</option>
-            <option value="spiral-twirl">Spiral-Twirl</option>
-            <option value="meteor-shower">Meteor Shower</option>
-            <option value="breathing-sphere">Breathing Sphere</option>
-            <option value="color-explosion">Color Explosion</option>
-        </select>
-        <button id="send-effect-btn">Send Effect</button>
+<div style="margin: 50px; text-align: center;">
+    <h1>LED Effect Controller</h1>
 
-        <h3 style="margin-top: 30px;">Custom Configuration</h3>
-        <div id="config-container" style="margin-top: 10px;">
-            <!-- Dynamic config inputs will go here -->
-        </div>
-        <button id="add-config-btn" style="margin-top: 10px;">Add Config Property</button>
+    <label for="client-selector">Select LED Strip:</label>
+    <select id="client-selector"></select>
 
-        <p id="status" style="margin-top: 20px; font-weight: bold;"></p>
-    </div>
+    <br/><br/>
+    <label for="effect-selector">Select Effect:</label>
+    <select id="effect-selector">
+        <option value="random">Random</option>
+        <option value="color-gradient">Color Gradient</option>
+        <option value="expanding-rings">Expanding Rings</option>
+        <option value="plane-sweep">Plane Sweep</option>
+        <option value="plain-ripple">Plain Ripple</option>
+        <option value="sparkle">Twinkling Sparkle</option>
+        <option value="two-plain">Two Plain Collision</option>
+        <option value="four-plain-collision">Four Plain Collision</option>
+        <option value="wave">Wave</option>
+        <option value="spiral-twirl">Spiral-Twirl</option>
+        <option value="meteor-shower">Meteor Shower</option>
+        <option value="breathing-sphere">Breathing Sphere</option>
+        <option value="color-explosion">Color Explosion</option>
+    </select>
 
-    <script>
-        const MQTT_TOPIC = 'led/effect'; // Same as in index.js
+    <button id="send-effect-btn">Send Effect</button>
 
-        // Add a new key-value input pair to the config container
-        document.getElementById('add-config-btn').addEventListener('click', () => {
-            const container = document.getElementById('config-container');
+    <h3 style="margin-top: 30px;">Custom Configuration</h3>
+    <div id="config-container" style="margin-top: 10px;"></div>
+    <button id="add-config-btn" style="margin-top: 10px;">Add Config Property</button>
 
-            const div = document.createElement('div');
-            div.style.marginBottom = '10px';
-            div.className = 'config-entry';
+    <p id="status" style="margin-top: 20px; font-weight: bold;"></p>
+</div>
 
-            const keyInput = document.createElement('input');
-            keyInput.type = 'text';
-            keyInput.placeholder = 'Key';
-            keyInput.style.marginRight = '10px';
+<script>
+    const socket = io();
+    const clientSelector = document.getElementById('client-selector');
+    const effectSelector = document.getElementById('effect-selector');
+    const statusElem = document.getElementById('status');
 
-            const valueInput = document.createElement('input');
-            valueInput.type = 'text';
-            valueInput.placeholder = 'Value';
-            valueInput.style.marginRight = '10px';
+    const updateClientDropdown = (clients) => {
+        clientSelector.innerHTML = '';
+        clients.forEach(client => {
+            const option = document.createElement('option');
+            option.value = client;
+            option.textContent = client;
+            clientSelector.appendChild(option);
+        });
+    };
 
-            const deleteButton = document.createElement('button');
-            deleteButton.textContent = 'Delete';
-            deleteButton.style.marginLeft = '10px';
-            deleteButton.addEventListener('click', () => {
-                container.removeChild(div);
-            });
+    socket.on('clients_updated', clients => {
+        updateClientDropdown(clients);
+    });
 
-            div.appendChild(keyInput);
-            div.appendChild(valueInput);
-            div.appendChild(deleteButton);
+    document.getElementById('add-config-btn').addEventListener('click', () => {
+        const container = document.getElementById('config-container');
+        const div = document.createElement('div');
+        div.style.marginBottom = '10px';
+        div.className = 'config-entry';
 
-            container.appendChild(div);
+        const keyInput = document.createElement('input');
+        keyInput.type = 'text';
+        keyInput.placeholder = 'Key';
+        keyInput.style.marginRight = '10px';
+
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Value';
+        valueInput.style.marginRight = '10px';
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Delete';
+        deleteButton.style.marginLeft = '10px';
+        deleteButton.addEventListener('click', () => {
+            container.removeChild(div);
         });
 
-        // Gather the configuration and send the effect
-        document.getElementById('send-effect-btn').addEventListener('click', () => {
-            const selectedEffect = document.getElementById('effect-selector').value;
+        div.appendChild(keyInput);
+        div.appendChild(valueInput);
+        div.appendChild(deleteButton);
+        container.appendChild(div);
+    });
 
-            // Collect custom config
-            const config = {};
-            const entries = document.querySelectorAll('.config-entry');
-            entries.forEach(entry => {
-                const key = entry.querySelector('input[placeholder="Key"]').value;
-                const value = entry.querySelector('input[placeholder="Value"]').value;
-                if (key) {
-                    config[key] = value; // Add key-value pair to the config
+    document.getElementById('send-effect-btn').addEventListener('click', () => {
+        const client_id = clientSelector.value;
+        const effect_name = effectSelector.value;
+        const configEntries = document.querySelectorAll('.config-entry');
+        const config = {};
+
+        configEntries.forEach(entry => {
+            const key = entry.querySelector('input[placeholder="Key"]').value;
+            const value = entry.querySelector('input[placeholder="Value"]').value;
+            if (key) {
+                config[key] = value;
+            }
+        });
+
+        fetch('/send-effect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ client_id, effect_name, config })
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    statusElem.textContent = `Effect "${effect_name}" sent to "${client_id}".`;
+                    statusElem.style.color = 'green';
+                } else {
+                    statusElem.textContent = `Failed to send effect: ${data.error}`;
+                    statusElem.style.color = 'red';
                 }
-            });
-
-            const payload = JSON.stringify({ effect_name: selectedEffect, config });
-
-            fetch('/send-effect', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: payload
             })
-                .then(response => response.json())
-                .then(data => {
-                    const status = document.getElementById('status');
-                    if (data.success) {
-                        status.textContent = `Effect "${selectedEffect}" sent successfully with config: ${JSON.stringify(config)}.`;
-                        status.style.color = 'green';
-                    } else {
-                        status.textContent = `Failed to send effect: ${data.error}`;
-                        status.style.color = 'red';
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('status').textContent = 'An error occurred while sending the effect.';
-                    document.getElementById('status').style.color = 'red';
-                });
-        });
-    </script>
+            .catch(err => {
+                console.error('Error:', err);
+                statusElem.textContent = 'An error occurred while sending the effect.';
+                statusElem.style.color = 'red';
+            });
+    });
+</script>
 </body>
 </html>
