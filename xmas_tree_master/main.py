@@ -58,6 +58,7 @@ def plot_leds(controller, coords):
     ax.set_xlabel("X Axis")
     ax.set_ylabel("Y Axis")
     ax.set_zlabel("Z Axis")
+    ax.set_title(f"3D LED Visualizer - Client ID: {my_client_id}")
 
     def update(frame):
         pixels = controller.get_plot_data()
