@@ -15,13 +15,11 @@ from utils.register_effects import registered_effects
 
 matplotlib.use('webagg')
 rcParams['webagg.address'] = '0.0.0.0'
-rcParams['webagg.port'] = 8888
-rcParams['webagg.open_in_browser'] = False
 
 with open("configs/config_master.json") as f:
     config_data = json.load(f)
 
-my_client_id = config_data.get("client_id", "unknown")
+default_client_id = config_data.get("client_id", "unknown")
 
 coords = None
 effect_controller = None
@@ -75,7 +73,14 @@ if __name__ == "__main__":
     parser.add_argument("--effect", choices=["wave", "test", "plane-sweep", "two-plain"], default="wave")
     parser.add_argument('--render', action=argparse.BooleanOptionalAction)
     parser.add_argument('--dry', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--client-id', default=default_client_id, help="MQTT client ID (default: from config file)")
+    parser.add_argument('--port', type=int, default=8888, help="WebAgg server port (default: 8888)")
     args = parser.parse_args()
+
+    my_client_id = args.client_id
+    webagg_port = args.port
+
+    rcParams['webagg.port'] = webagg_port
 
     coords = load_coords()
     controller = LEDController(coords, pixel_count=len(coords), drymode=(args.dry or False))
