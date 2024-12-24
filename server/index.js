@@ -42,7 +42,7 @@ app.post('/send-effect', (req, res) => {
     const payload = {
         client_id,
         effect_name,
-        config: config || {}
+        config: {}
     };
     mqttClient.publish(LED_EFFECT_TOPIC, JSON.stringify(payload), err => {
         if (err) {
