@@ -22,6 +22,7 @@ class BreathingSphereEffect(Effect):
         "speed": 0.05,
         "color": (0, 0, 255),
     }
+    name = "Breathing Sphere"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -23,6 +23,7 @@ class MeteorShowerEffect(Effect):
         "trail_length": 10,
         "color": (0, 255, 255),
     }
+    name = "Meteor Shower"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

@@ -14,6 +14,7 @@ class ColorGradientSweepEffect(Effect):
         "speed": 1,
         "plane_height": 5,
     }
+    name = "Color Gradient"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

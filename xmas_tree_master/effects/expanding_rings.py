@@ -11,7 +11,7 @@ class ExpandingRingsEffect(Effect):
     Circular rings that expand and contract from the center.
     """
     effect_selector = 'expanding-rings'
-
+    name = "Expanding Rings"
     default_config = {
         "speed": 1,
         "max_radius": 100,

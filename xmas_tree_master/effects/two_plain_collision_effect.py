@@ -17,7 +17,7 @@ class TwoPlainCollisionEffect(Effect):
     """
 
     effect_selector = 'two-plain'
-
+    name = "Two Plain Collision"
     default_config = {
         "speed": 1,
         "color1": (255, 0, 0),

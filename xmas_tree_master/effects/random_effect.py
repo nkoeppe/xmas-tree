@@ -13,7 +13,7 @@ class RandomEffect(Effect):
     """
     effect_selector = 'random'
     default_config = None
-
+    name = "Random"
     def __init__(self,  **kwargs):
         super().__init__( **kwargs)
         self.colors = [

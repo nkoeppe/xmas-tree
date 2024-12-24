@@ -13,7 +13,7 @@ class PlainRippleEffect(Effect):
     Wavy planes that oscillate as they move.
     """
     effect_selector = 'plain-ripple'
-
+    name = "Plain Ripple"
     default_config = {
         "speed": 1,
         "plane_height": 5,

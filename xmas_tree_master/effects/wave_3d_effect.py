@@ -12,7 +12,7 @@ class Wave3DEffect(Effect):
     """
     effect_selector = 'wave'
     default_config = None
-
+    name = "Wave"
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.time = 0  # Keeps track of time for animation

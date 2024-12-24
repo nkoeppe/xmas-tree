@@ -22,6 +22,8 @@ class ColorExplosionEffect(Effect):
         "speed": 2,
         "base_color": (255, 0, 255),
     }
+    name = "Color Explosion"
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

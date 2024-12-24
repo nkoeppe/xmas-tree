@@ -1,4 +1,4 @@
-
+# registry/effect_registry.py
 class EffectRegistry:
     """
     Singleton registry for all effects.
@@ -17,4 +17,14 @@ class EffectRegistry:
 
     @classmethod
     def list_effects(cls):
-        return list(cls._registry.keys())
+        """
+        Return a list of dicts, each containing 'selector', 'name', and 'default_config'.
+        """
+        results = []
+        for selector, effect_cls in cls._registry.items():
+            results.append({
+                "selector": selector,
+                "name": getattr(effect_cls, "name", selector),
+                "default_config": effect_cls.default_config
+            })
+        return results

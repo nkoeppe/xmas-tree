@@ -23,7 +23,7 @@ class SpiralTwirlEffect(Effect):
         "radius": 0.5,
         "color": (255, 0, 0),
     }
-
+    name = "Spiral Twirl"
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.speed = self.get_config('speed', float)

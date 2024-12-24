@@ -20,6 +20,7 @@ class FourPlaneCollisionEffect(Effect):
         "color_4": (0, 0, 255),
     }
 
+    name = "Four Plane Collision"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

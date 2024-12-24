@@ -14,6 +14,7 @@ class PlaneSweepEffect(Effect):
     the color of all LEDs below its height.
     """
     effect_selector = 'plane-sweep'
+    name = "Plane Sweep"
 
     default_config = {
         "speed": 0.1,
