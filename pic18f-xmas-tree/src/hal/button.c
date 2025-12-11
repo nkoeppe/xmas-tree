@@ -1,8 +1,8 @@
 /*
- * button.c - Button Handler with Interrupt-Based Debouncing
+ * button.c - Button Handler with IOC (Interrupt-on-Change)
  *
- * Uses timer ISR for debounce timing - button state checked in ISR context
- * Active-low button (pressed = connected to ground)
+ * True interrupt-based button handling using PORTB IOC
+ * ISR fires on pin change, debounce handled via timer
  *
  * nko
  */
@@ -12,106 +12,103 @@
 #include "timer.h"
 #include <xc.h>
 
-/* Debounce state machine */
-typedef enum {
-    BTN_IDLE,           /* Waiting for press */
-    BTN_DEBOUNCING,     /* Waiting for stable state */
-    BTN_PRESSED,        /* Button confirmed pressed */
-    BTN_WAIT_RELEASE    /* Long press fired, waiting for release */
-} button_state_t;
-
-/* Button state - accessed from ISR */
-static volatile button_state_t g_state = BTN_IDLE;
-static volatile uint8_t g_debounce_count = 0;
-static volatile uint16_t g_press_count = 0;
+/* Button state */
+static volatile uint8_t g_edge_detected = 0;    /* IOC fired */
+static volatile uint32_t g_edge_time = 0;       /* When edge occurred */
+static volatile uint8_t g_debounced_state = 0;  /* Stable state after debounce */
+static volatile uint32_t g_press_start = 0;     /* When press started */
 
 /* Event flags */
 static volatile uint8_t g_short_press_flag = 0;
 static volatile uint8_t g_long_press_flag = 0;
-
-/* Debounce counts (called every 1ms from timer ISR) */
-#define DEBOUNCE_COUNT      (DEBOUNCE_MS)
-#define LONG_PRESS_COUNT    (LONG_PRESS_MS)
+static volatile uint8_t g_long_fired = 0;       /* Prevent double-fire */
 
 void button_init(void)
 {
-    /* Configure button pin as input */
+    /* Configure RB0 as input */
     BUTTON_TRIS = 1;
 
-    /* Note: RC0 doesn't have internal pull-up on most PIC18F
-     * External pull-up resistor required (10K to VCC) */
+    /* Enable weak pull-up on PORTB */
+    INTCON2bits.nRBPU = 0;  /* Enable PORTB pull-ups globally */
+    BUTTON_WPU = 1;         /* Enable pull-up on RB0 */
+
+    /* Configure IOC on RB0 */
+    BUTTON_IOC = 1;         /* Enable IOC on RB0 */
+
+    /* Read PORTB to clear mismatch */
+    (void)PORTB;
+
+    /* Enable PORTB IOC interrupt (low priority) */
+    INTCONbits.RBIF = 0;    /* Clear flag */
+    INTCONbits.RBIE = 1;    /* Enable IOC interrupt */
+    INTCON2bits.RBIP = 0;   /* Low priority */
+    INTCONbits.GIEL = 1;    /* Enable low-priority interrupts */
 
     /* Initialize state */
-    g_state = BTN_IDLE;
-    g_debounce_count = 0;
-    g_press_count = 0;
+    g_edge_detected = 0;
+    g_debounced_state = !BUTTON_PIN;  /* Read initial state */
+    g_press_start = 0;
     g_short_press_flag = 0;
     g_long_press_flag = 0;
+    g_long_fired = 0;
 }
 
 /*
- * Button ISR handler - call this from timer ISR every 1ms
- * Handles all debouncing and press detection in interrupt context
+ * IOC Interrupt Handler - called when RB0 changes state
+ * Just records the edge, debounce handled elsewhere
  */
-void button_isr_handler(void)
+void button_ioc_isr(void)
 {
-    uint8_t btn_pressed = !BUTTON_PIN;  /* Active low: 0 = pressed */
+    /* Read PORTB to clear mismatch condition */
+    (void)PORTB;
 
-    switch (g_state) {
-        case BTN_IDLE:
-            if (btn_pressed) {
-                /* Button went low, start debounce */
-                g_state = BTN_DEBOUNCING;
-                g_debounce_count = 0;
-            }
-            break;
+    /* Record edge event */
+    g_edge_detected = 1;
+    g_edge_time = millis_raw();  /* Get raw millis without disabling interrupts */
 
-        case BTN_DEBOUNCING:
-            g_debounce_count++;
-            if (g_debounce_count >= DEBOUNCE_COUNT) {
-                if (btn_pressed) {
-                    /* Still pressed after debounce - confirmed press */
-                    g_state = BTN_PRESSED;
-                    g_press_count = 0;
-                } else {
-                    /* Released during debounce - was noise */
-                    g_state = BTN_IDLE;
-                }
-            }
-            break;
-
-        case BTN_PRESSED:
-            if (!btn_pressed) {
-                /* Released - short press */
-                g_short_press_flag = 1;
-                g_state = BTN_IDLE;
-            } else {
-                /* Still pressed - count for long press */
-                g_press_count++;
-                if (g_press_count >= LONG_PRESS_COUNT) {
-                    /* Long press detected */
-                    g_long_press_flag = 1;
-                    g_state = BTN_WAIT_RELEASE;
-                }
-            }
-            break;
-
-        case BTN_WAIT_RELEASE:
-            if (!btn_pressed) {
-                /* Released after long press - back to idle */
-                g_state = BTN_IDLE;
-            }
-            break;
-    }
+    /* Clear IOC flag */
+    INTCONbits.RBIF = 0;
 }
 
 /*
- * Poll function - now just a stub for compatibility
- * Actual work is done in button_isr_handler() called from timer ISR
+ * Process button state - call from main loop
+ * Handles debounce timing and press detection
  */
 void button_poll(void)
 {
-    /* Nothing to do - handled in ISR */
+    uint32_t now = millis();
+    uint8_t current_state = !BUTTON_PIN;  /* Active low */
+
+    /* Check if we have a pending edge to debounce */
+    if (g_edge_detected) {
+        if ((now - g_edge_time) >= DEBOUNCE_MS) {
+            /* Debounce period passed - check stable state */
+            uint8_t old_state = g_debounced_state;
+            g_debounced_state = current_state;
+            g_edge_detected = 0;
+
+            /* Detect press (rising edge of debounced state) */
+            if (g_debounced_state && !old_state) {
+                g_press_start = now;
+                g_long_fired = 0;
+            }
+
+            /* Detect release (falling edge of debounced state) */
+            if (!g_debounced_state && old_state) {
+                if (!g_long_fired) {
+                    g_short_press_flag = 1;
+                }
+            }
+        }
+    }
+
+    /* Check for long press while held */
+    if (g_debounced_state && !g_long_fired && g_press_start > 0) {
+        if ((now - g_press_start) >= LONG_PRESS_MS) {
+            g_long_press_flag = 1;
+            g_long_fired = 1;
+        }
+    }
 }
 
 uint8_t button_was_short_press(void)
@@ -134,5 +131,5 @@ uint8_t button_was_long_press(void)
 
 uint8_t button_is_pressed(void)
 {
-    return (g_state == BTN_PRESSED || g_state == BTN_WAIT_RELEASE);
+    return g_debounced_state;
 }

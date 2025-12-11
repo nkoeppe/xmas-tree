@@ -1,8 +1,8 @@
 /*
- * button.h - Button Handler HAL
+ * button.h - Button Handler with IOC (Interrupt-on-Change)
  *
- * Provides debounced button input with short/long press detection
- * Handles active-low button with internal pull-up resistor
+ * True interrupt-based button handling using PORTB IOC
+ * ISR fires on pin change, debounce handled in main loop
  *
  * nko
  */
@@ -14,27 +14,23 @@
 
 /*
  * Button Handler
- * Provides debounced button input with short/long press detection
  *
  * Usage:
  *   1. Call button_init() once at startup
- *   2. Call button_poll() in main loop (or periodically)
+ *   2. Call button_poll() in main loop
  *   3. Check button_was_short_press() and button_was_long_press() for events
+ *
+ * IOC fires on RB0 change, sets flag with timestamp.
+ * button_poll() handles debounce timing and press detection.
  */
 
-/* Initialize button pin (external pull-up required on RC0) */
+/* Initialize button pin with pull-up and IOC */
 void button_init(void);
 
-/*
- * ISR handler - call from timer ISR every 1ms
- * Handles debouncing and press detection in interrupt context
- */
-void button_isr_handler(void);
+/* IOC ISR handler - called from low-priority ISR when RBIF set */
+void button_ioc_isr(void);
 
-/*
- * Poll function - stub for compatibility, does nothing
- * Actual work done in button_isr_handler()
- */
+/* Process button state - call from main loop */
 void button_poll(void);
 
 /* Returns 1 once if short press detected (clears flag) */

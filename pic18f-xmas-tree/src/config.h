@@ -15,9 +15,11 @@
 #define LED_DATA_PIN        LATCbits.LATC1
 #define LED_DATA_TRIS       TRISCbits.TRISC1
 
-/* Button Configuration (active low with pull-up on RC0) */
-#define BUTTON_PIN          PORTCbits.RC0
-#define BUTTON_TRIS         TRISCbits.TRISC0
+/* Button Configuration (active low with pull-up on RB0, IOC enabled) */
+#define BUTTON_PIN          PORTBbits.RB0
+#define BUTTON_TRIS         TRISBbits.TRISB0
+#define BUTTON_WPU          WPUBbits.WPUB0
+#define BUTTON_IOC          IOCBbits.IOCB0
 
 /* Timing */
 #define FRAME_RATE_HZ       30

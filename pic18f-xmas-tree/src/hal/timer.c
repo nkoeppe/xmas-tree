@@ -37,7 +37,7 @@ void timer_init(void)
     INTCONbits.TMR0IF = 0;  /* Clear interrupt flag */
     INTCONbits.TMR0IE = 1;  /* Enable interrupt */
 
-    /* Enable high-priority interrupts */
+    /* Enable interrupt priority levels */
     RCONbits.IPEN = 1;      /* Enable priority levels */
     INTCON2bits.TMR0IP = 1; /* Timer0 high priority */
     INTCONbits.GIEH = 1;    /* Enable high-priority interrupts */
@@ -58,6 +58,12 @@ uint32_t millis(void)
     return m;
 }
 
+uint32_t millis_raw(void)
+{
+    /* Direct read - use only from ISR context where interrupts already managed */
+    return g_millis;
+}
+
 void delay_ms(uint16_t ms)
 {
     uint32_t start = millis();
@@ -67,8 +73,7 @@ void delay_ms(uint16_t ms)
 }
 
 /*
- * High-priority interrupt service routine
- * Called every 1ms by Timer0 overflow
+ * High-priority ISR - Timer0 (1ms tick)
  */
 void __interrupt(high_priority) timer0_isr(void)
 {
@@ -80,8 +85,16 @@ void __interrupt(high_priority) timer0_isr(void)
         TMR0L = TIMER0_RELOAD_L;
 
         g_millis++;
+    }
+}
 
-        /* Handle button debouncing in ISR context */
-        button_isr_handler();
+/*
+ * Low-priority ISR - PORTB IOC (button change)
+ */
+void __interrupt(low_priority) ioc_isr(void)
+{
+    if (INTCONbits.RBIF) {
+        button_ioc_isr();
+        /* Flag cleared in button_ioc_isr() after reading PORTB */
     }
 }
