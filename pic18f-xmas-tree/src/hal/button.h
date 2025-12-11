@@ -22,12 +22,18 @@
  *   3. Check button_was_short_press() and button_was_long_press() for events
  */
 
-/* Initialize button pin with pull-up */
+/* Initialize button pin (external pull-up required on RC0) */
 void button_init(void);
 
 /*
- * Poll button state (call frequently, e.g., every frame or every ms)
- * Handles debouncing and press duration tracking
+ * ISR handler - call from timer ISR every 1ms
+ * Handles debouncing and press detection in interrupt context
+ */
+void button_isr_handler(void);
+
+/*
+ * Poll function - stub for compatibility, does nothing
+ * Actual work done in button_isr_handler()
  */
 void button_poll(void);
 

@@ -12,12 +12,12 @@
     #error "LED_COUNT must be greater than 0"
 #endif
 
-#define LED_DATA_PIN        LATCbits.LATC0
-#define LED_DATA_TRIS       TRISCbits.TRISC0
+#define LED_DATA_PIN        LATCbits.LATC1
+#define LED_DATA_TRIS       TRISCbits.TRISC1
 
-/* Button Configuration (active low with pull-up) */
-#define BUTTON_PIN          PORTBbits.RB0
-#define BUTTON_TRIS         TRISBbits.TRISB0
+/* Button Configuration (active low with pull-up on RC0) */
+#define BUTTON_PIN          PORTCbits.RC0
+#define BUTTON_TRIS         TRISCbits.TRISC0
 
 /* Timing */
 #define FRAME_RATE_HZ       30

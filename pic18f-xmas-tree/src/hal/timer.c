@@ -1,4 +1,5 @@
 #include "timer.h"
+#include "button.h"
 #include "../config.h"
 #include <xc.h>
 
@@ -79,5 +80,8 @@ void __interrupt(high_priority) timer0_isr(void)
         TMR0L = TIMER0_RELOAD_L;
 
         g_millis++;
+
+        /* Handle button debouncing in ISR context */
+        button_isr_handler();
     }
 }

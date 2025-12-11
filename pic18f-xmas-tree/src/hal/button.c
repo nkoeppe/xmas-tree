@@ -1,8 +1,8 @@
 /*
- * button.c - Button Handler HAL Implementation
+ * button.c - Button Handler with Interrupt-Based Debouncing
  *
- * Implements debounced button input with short/long press detection
- * Active-low button with internal pull-up, following existing timer.c patterns
+ * Uses timer ISR for debounce timing - button state checked in ISR context
+ * Active-low button (pressed = connected to ground)
  *
  * nko
  */
@@ -12,77 +12,106 @@
 #include "timer.h"
 #include <xc.h>
 
-/* Button state */
-static uint8_t g_last_raw = 0;          /* Last raw reading */
-static uint8_t g_debounced = 0;         /* Current debounced state */
-static uint32_t g_debounce_start = 0;   /* Time when raw changed */
-static uint32_t g_press_start = 0;      /* Time when press started */
+/* Debounce state machine */
+typedef enum {
+    BTN_IDLE,           /* Waiting for press */
+    BTN_DEBOUNCING,     /* Waiting for stable state */
+    BTN_PRESSED,        /* Button confirmed pressed */
+    BTN_WAIT_RELEASE    /* Long press fired, waiting for release */
+} button_state_t;
 
-/* Event flags (cleared after read) */
+/* Button state - accessed from ISR */
+static volatile button_state_t g_state = BTN_IDLE;
+static volatile uint8_t g_debounce_count = 0;
+static volatile uint16_t g_press_count = 0;
+
+/* Event flags */
 static volatile uint8_t g_short_press_flag = 0;
 static volatile uint8_t g_long_press_flag = 0;
-static uint8_t g_long_press_fired = 0;  /* Prevent multiple long press events */
+
+/* Debounce counts (called every 1ms from timer ISR) */
+#define DEBOUNCE_COUNT      (DEBOUNCE_MS)
+#define LONG_PRESS_COUNT    (LONG_PRESS_MS)
 
 void button_init(void)
 {
     /* Configure button pin as input */
     BUTTON_TRIS = 1;
 
-    /* Enable internal weak pull-up on PORTB if using RB0 */
-    /* Note: May need INTCON2bits.nRBPU = 0 to enable weak pull-ups */
-    INTCON2bits.nRBPU = 0;  /* Enable PORTB weak pull-ups */
-    WPUBbits.WPUB0 = 1;     /* Enable pull-up on RB0 specifically */
+    /* Note: RC0 doesn't have internal pull-up on most PIC18F
+     * External pull-up resistor required (10K to VCC) */
 
     /* Initialize state */
-    g_last_raw = 0;
-    g_debounced = 0;
-    g_debounce_start = millis();
-    g_press_start = 0;
+    g_state = BTN_IDLE;
+    g_debounce_count = 0;
+    g_press_count = 0;
     g_short_press_flag = 0;
     g_long_press_flag = 0;
-    g_long_press_fired = 0;
 }
 
+/*
+ * Button ISR handler - call this from timer ISR every 1ms
+ * Handles all debouncing and press detection in interrupt context
+ */
+void button_isr_handler(void)
+{
+    uint8_t btn_pressed = !BUTTON_PIN;  /* Active low: 0 = pressed */
+
+    switch (g_state) {
+        case BTN_IDLE:
+            if (btn_pressed) {
+                /* Button went low, start debounce */
+                g_state = BTN_DEBOUNCING;
+                g_debounce_count = 0;
+            }
+            break;
+
+        case BTN_DEBOUNCING:
+            g_debounce_count++;
+            if (g_debounce_count >= DEBOUNCE_COUNT) {
+                if (btn_pressed) {
+                    /* Still pressed after debounce - confirmed press */
+                    g_state = BTN_PRESSED;
+                    g_press_count = 0;
+                } else {
+                    /* Released during debounce - was noise */
+                    g_state = BTN_IDLE;
+                }
+            }
+            break;
+
+        case BTN_PRESSED:
+            if (!btn_pressed) {
+                /* Released - short press */
+                g_short_press_flag = 1;
+                g_state = BTN_IDLE;
+            } else {
+                /* Still pressed - count for long press */
+                g_press_count++;
+                if (g_press_count >= LONG_PRESS_COUNT) {
+                    /* Long press detected */
+                    g_long_press_flag = 1;
+                    g_state = BTN_WAIT_RELEASE;
+                }
+            }
+            break;
+
+        case BTN_WAIT_RELEASE:
+            if (!btn_pressed) {
+                /* Released after long press - back to idle */
+                g_state = BTN_IDLE;
+            }
+            break;
+    }
+}
+
+/*
+ * Poll function - now just a stub for compatibility
+ * Actual work is done in button_isr_handler() called from timer ISR
+ */
 void button_poll(void)
 {
-    /* Read raw button state (active low: 0 when pressed) */
-    uint8_t raw = !BUTTON_PIN;  /* Invert: 1 when pressed */
-    uint32_t now = millis();
-
-    /* Debounce: require stable state for DEBOUNCE_MS */
-    if (raw != g_last_raw) {
-        /* State changed, restart debounce timer */
-        g_last_raw = raw;
-        g_debounce_start = now;
-    }
-
-    /* Check if debounce period has elapsed */
-    if ((now - g_debounce_start) >= DEBOUNCE_MS) {
-        uint8_t old_debounced = g_debounced;
-        g_debounced = g_last_raw;
-
-        /* Detect press start (rising edge) */
-        if (g_debounced && !old_debounced) {
-            g_press_start = now;
-            g_long_press_fired = 0;
-        }
-
-        /* Detect release (falling edge) */
-        if (!g_debounced && old_debounced) {
-            /* Only fire short press if long press wasn't already fired */
-            if (!g_long_press_fired) {
-                g_short_press_flag = 1;
-            }
-        }
-    }
-
-    /* Check for long press while button is still held */
-    if (g_debounced && !g_long_press_fired) {
-        if ((now - g_press_start) >= LONG_PRESS_MS) {
-            g_long_press_flag = 1;
-            g_long_press_fired = 1;  /* Prevent short press on release */
-        }
-    }
+    /* Nothing to do - handled in ISR */
 }
 
 uint8_t button_was_short_press(void)
@@ -105,5 +134,5 @@ uint8_t button_was_long_press(void)
 
 uint8_t button_is_pressed(void)
 {
-    return g_debounced;
+    return (g_state == BTN_PRESSED || g_state == BTN_WAIT_RELEASE);
 }
